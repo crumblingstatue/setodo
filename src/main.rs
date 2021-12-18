@@ -88,8 +88,26 @@ impl epi::App for TodoApp {
                                 self.adding_topic = false;
                                 self.topic_sel = Some(self.topics.len() - 1);
                             }
-                        } else if ui.button("+").clicked() {
-                            self.adding_topic = true;
+                        } else {
+                            ui.horizontal(|ui| {
+                                if ui.button("+").clicked() {
+                                    self.adding_topic = true;
+                                }
+                                if ui
+                                    .add_enabled(self.topic_sel.is_some(), egui::Button::new("-"))
+                                    .clicked()
+                                {
+                                    if let Some(topic_sel) = self.topic_sel {
+                                        self.topics.remove(topic_sel);
+                                        if self.topics.is_empty() {
+                                            self.topic_sel = None;
+                                        } else {
+                                            self.topic_sel =
+                                                Some(topic_sel.clamp(0, self.topics.len() - 1));
+                                        }
+                                    }
+                                }
+                            });
                         }
                     });
                     if let Some(sel) = self.topic_sel {
