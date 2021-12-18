@@ -142,13 +142,12 @@ impl epi::App for TodoApp {
                                 ui.text_edit_singleline(&mut self.new_add_string_buf)
                                     .request_focus();
                                 if clicked || ui.input().key_pressed(egui::Key::Enter) {
-                                    self.topics[topic_sel].tasks.push(Task {
+                                    topic!().tasks.push(Task {
                                         title: self.new_add_string_buf.take(),
                                         desc: String::new(),
                                     });
                                     self.adding_task = false;
-                                    topic!().task_sel =
-                                        Some(self.topics[topic_sel].tasks.len() - 1);
+                                    topic!().task_sel = Some(topic!().tasks.len() - 1);
                                 }
                             } else {
                                 if ui.button("+").clicked()
@@ -171,9 +170,7 @@ impl epi::App for TodoApp {
                         });
                         if let Some(task_sel) = topic!().task_sel {
                             ui.heading("Task Description");
-                            ui.text_edit_multiline(
-                                &mut self.topics[topic_sel].tasks[task_sel].desc,
-                            );
+                            ui.text_edit_multiline(&mut topic!().tasks[task_sel].desc);
                         }
                     }
                 });
