@@ -76,6 +76,11 @@ impl epi::App for TodoApp {
                     ui.horizontal(|ui| {
                         if self.adding_topic {
                             let clicked = ui.button("✔").clicked();
+                            if ui.button("🗙").clicked() || ui.input().key_pressed(egui::Key::Escape)
+                            {
+                                self.adding_topic = false;
+                                self.new_add_string_buf.clear();
+                            }
                             ui.text_edit_singleline(&mut self.new_add_string_buf)
                                 .request_focus();
                             if clicked || ui.input().key_pressed(egui::Key::Enter) {
@@ -139,6 +144,12 @@ impl epi::App for TodoApp {
                         ui.horizontal(|ui| {
                             if self.adding_task {
                                 let clicked = ui.button("✔").clicked();
+                                if ui.button("🗙").clicked()
+                                    || ui.input().key_pressed(egui::Key::Escape)
+                                {
+                                    self.adding_task = false;
+                                    self.new_add_string_buf.clear();
+                                }
                                 ui.text_edit_singleline(&mut self.new_add_string_buf)
                                     .request_focus();
                                 if clicked || ui.input().key_pressed(egui::Key::Enter) {
