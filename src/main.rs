@@ -150,10 +150,23 @@ impl epi::App for TodoApp {
                                     topic!().task_sel =
                                         Some(self.topics[topic_sel].tasks.len() - 1);
                                 }
-                            } else if ui.button("+").clicked()
-                                || ui.input().key_pressed(egui::Key::Insert)
-                            {
-                                self.adding_task = true;
+                            } else {
+                                if ui.button("+").clicked()
+                                    || ui.input().key_pressed(egui::Key::Insert)
+                                {
+                                    self.adding_task = true;
+                                }
+                                if ui.button("-").clicked() {
+                                    if let Some(task_sel) = topic!().task_sel {
+                                        topic!().tasks.remove(task_sel);
+                                        if topic!().tasks.is_empty() {
+                                            topic!().task_sel = None;
+                                        } else {
+                                            topic!().task_sel =
+                                                Some(task_sel.clamp(0, topic!().tasks.len() - 1));
+                                        }
+                                    }
+                                }
                             }
                         });
                         if let Some(task_sel) = topic!().task_sel {
