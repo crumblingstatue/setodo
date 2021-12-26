@@ -3,7 +3,7 @@
 use std::{error::Error, path::PathBuf};
 
 use eframe::{
-    egui::{self, ScrollArea, TextBuffer},
+    egui::{self, RichText, ScrollArea, TextBuffer},
     epi,
 };
 use serde::{Deserialize, Serialize};
@@ -45,6 +45,8 @@ struct Topic {
 struct Task {
     title: String,
     desc: String,
+    #[serde(default)]
+    done: bool,
 }
 
 impl epi::App for TodoApp {
@@ -132,13 +134,20 @@ impl epi::App for TodoApp {
                             .id_source("task_scroll")
                             .show(ui, |ui| {
                                 let topic = &mut topic!();
-                                for (i, task) in topic.tasks.iter().enumerate() {
-                                    if ui
-                                        .selectable_label(topic.task_sel == Some(i), &task.title)
-                                        .clicked()
-                                    {
-                                        topic.task_sel = Some(i);
-                                    }
+                                for (i, task) in topic.tasks.iter_mut().enumerate() {
+                                    ui.horizontal(|ui| {
+                                        ui.checkbox(&mut task.done, "");
+                                        let mut text = RichText::new(&task.title);
+                                        if task.done {
+                                            text = text.strikethrough();
+                                        }
+                                        if ui
+                                            .selectable_label(topic.task_sel == Some(i), text)
+                                            .clicked()
+                                        {
+                                            topic.task_sel = Some(i);
+                                        }
+                                    });
                                 }
                             });
                         ui.horizontal(|ui| {
@@ -156,6 +165,7 @@ impl epi::App for TodoApp {
                                     topic!().tasks.push(Task {
                                         title: self.new_add_string_buf.take(),
                                         desc: String::new(),
+                                        done: false,
                                     });
                                     self.adding_task = false;
                                     topic!().task_sel = Some(topic!().tasks.len() - 1);
