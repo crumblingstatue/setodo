@@ -1,4 +1,4 @@
-use crate::data::{Task, Topic};
+use crate::data::{Attachment, Task, Topic};
 use eframe::{
     egui::{self, RichText, ScrollArea, TextBuffer},
     epi,
@@ -147,6 +147,7 @@ impl epi::App for TodoApp {
                                         title: self.new_add_string_buf.take(),
                                         desc: String::new(),
                                         done: false,
+                                        attachments: Vec::new(),
                                     });
                                     self.adding_task = false;
                                     topic!().task_sel = Some(topic!().tasks.len() - 1);
@@ -173,10 +174,78 @@ impl epi::App for TodoApp {
                         if let Some(task_sel) = topic!().task_sel {
                             ui.heading("Task Description");
                             ui.text_edit_multiline(&mut topic!().tasks[task_sel].desc);
+                            for attachment in &topic!().tasks[task_sel].attachments {
+                                ui.horizontal(|ui| {
+                                    ui.label(attachment.filename.display().to_string());
+                                    if ui.button("open").clicked() {
+                                        let tmp_dir = std::env::temp_dir();
+                                        let save_dir = tmp_dir.join("setodo-attachments");
+                                        let path = save_dir.join(&attachment.filename);
+                                        let dir_exists;
+                                        if save_dir.exists() {
+                                            dir_exists = true;
+                                        } else {
+                                            match std::fs::create_dir(save_dir) {
+                                                Ok(_) => {
+                                                    dir_exists = true;
+                                                }
+                                                Err(e) => {
+                                                    error_msgbox(&format!(
+                                                        "Failed to create tmp dir: {}",
+                                                        e
+                                                    ));
+                                                    dir_exists = false;
+                                                }
+                                            }
+                                        }
+                                        if dir_exists {
+                                            match std::fs::write(&path, &attachment.data) {
+                                                Ok(_) => {
+                                                    if let Err(e) = open::that(path) {
+                                                        error_msgbox(&format!(
+                                                            "Failed to open file: {}",
+                                                            e
+                                                        ))
+                                                    }
+                                                }
+                                                Err(e) => error_msgbox(&format!(
+                                                    "Failed to save file: {}",
+                                                    e
+                                                )),
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            if ui.button("Attach files").clicked() {
+                                if let Some(paths) = rfd::FileDialog::new().pick_files() {
+                                    for path in paths {
+                                        if let Some(filename) = path.file_name() {
+                                            let data = std::fs::read(&path).unwrap();
+                                            topic!().tasks[task_sel].attachments.push(Attachment {
+                                                filename: filename.into(),
+                                                data,
+                                            })
+                                        } else {
+                                            error_msgbox(&format!(
+                                                "Could not determine filename for file {:?}",
+                                                path
+                                            ));
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 });
             });
         });
     }
+}
+
+fn error_msgbox(msg: &str) {
+    rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_description(msg)
+        .show();
 }

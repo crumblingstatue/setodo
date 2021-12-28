@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -15,4 +17,12 @@ pub struct Task {
     pub desc: String,
     #[serde(default)]
     pub done: bool,
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Attachment {
+    pub filename: PathBuf,
+    pub data: Vec<u8>,
 }
