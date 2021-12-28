@@ -1,6 +1,6 @@
 use crate::data::{Attachment, Task, Topic};
 use eframe::{
-    egui::{self, RichText, ScrollArea, TextBuffer},
+    egui::{self, Button, RichText, ScrollArea, TextBuffer},
     epi,
 };
 use serde::{Deserialize, Serialize};
@@ -95,6 +95,22 @@ impl epi::App for TodoApp {
                                         }
                                     }
                                 }
+                                if let Some(topic_sel) = self.topic_sel {
+                                    if ui.add_enabled(topic_sel > 0, Button::new("⬆")).clicked() {
+                                        self.topics.swap(topic_sel, topic_sel - 1);
+                                        self.topic_sel = Some(topic_sel - 1);
+                                    }
+                                    if ui
+                                        .add_enabled(
+                                            topic_sel < self.topics.len() - 1,
+                                            Button::new("⬇"),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.topics.swap(topic_sel, topic_sel + 1);
+                                        self.topic_sel = Some(topic_sel + 1);
+                                    }
+                                }
                             });
                         }
                     });
@@ -168,6 +184,22 @@ impl epi::App for TodoApp {
                                                 Some(task_sel.clamp(0, topic!().tasks.len() - 1));
                                         }
                                     }
+                                }
+                            }
+                            if let Some(task_sel) = topic!().task_sel {
+                                if ui.add_enabled(task_sel > 0, Button::new("⬆")).clicked() {
+                                    topic!().tasks.swap(task_sel, task_sel - 1);
+                                    topic!().task_sel = Some(task_sel - 1);
+                                }
+                                if ui
+                                    .add_enabled(
+                                        task_sel < topic!().tasks.len() - 1,
+                                        Button::new("⬇"),
+                                    )
+                                    .clicked()
+                                {
+                                    topic!().tasks.swap(task_sel, task_sel + 1);
+                                    topic!().task_sel = Some(task_sel + 1);
                                 }
                             }
                         });
