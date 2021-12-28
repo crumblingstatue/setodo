@@ -1,6 +1,7 @@
 #![feature(decl_macro)]
 
 use app::TodoApp;
+use eframe::egui;
 
 mod app;
 mod data;
@@ -13,6 +14,11 @@ fn main() {
             TodoApp::default()
         }
     };
-    let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        always_on_top: true,
+        decorated: false,
+        initial_window_size: Some(egui::vec2(620., 480.)),
+        ..Default::default()
+    };
     eframe::run_native(Box::new(app), native_options);
 }
