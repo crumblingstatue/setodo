@@ -1,6 +1,6 @@
 use crate::data::{Attachment, Task, Topic};
 use eframe::{
-    egui::{self, Button, RichText, ScrollArea, TextBuffer},
+    egui::{self, Button, Key, RichText, ScrollArea, TextBuffer},
     epi,
 };
 use serde::{Deserialize, Serialize};
@@ -39,7 +39,10 @@ impl epi::App for TodoApp {
         TodoApp::save(self).unwrap();
     }
 
-    fn update(&mut self, ctx: &egui::CtxRef, _frame: &epi::Frame) {
+    fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
+        if ctx.input().key_pressed(Key::Escape) {
+            frame.quit();
+        }
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
