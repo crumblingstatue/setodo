@@ -3,8 +3,9 @@ use eframe::{
     egui::{self, Button, Key, RichText, ScrollArea, TextBuffer},
     epi,
 };
+use rmp_serde::Serializer;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, path::PathBuf};
+use std::{error::Error, fs::File, path::PathBuf};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TodoApp {
@@ -16,17 +17,21 @@ pub struct TodoApp {
 }
 
 fn file_name() -> PathBuf {
-    dirs::home_dir().unwrap().join(".setodo.json")
+    dirs::home_dir().unwrap().join(".setodo.dat")
 }
 
 impl TodoApp {
     pub fn load() -> Result<Self, Box<dyn Error>> {
-        let json = std::fs::read_to_string(file_name())?;
-        Ok(serde_json::from_str(&json)?)
+        let file = File::open(file_name())?;
+        let dec = zstd::stream::read::Decoder::new(file)?;
+        Ok(rmp_serde::from_read(dec)?)
     }
     fn save(&self) -> Result<(), Box<dyn Error>> {
-        let json = serde_json::to_string(self)?;
-        Ok(std::fs::write(file_name(), json)?)
+        let file = File::create(file_name())?;
+        let mut enc = zstd::stream::write::Encoder::new(file, zstd::DEFAULT_COMPRESSION_LEVEL)?;
+        self.serialize(&mut Serializer::new(&mut enc))?;
+        enc.finish()?;
+        Ok(())
     }
 }
 
