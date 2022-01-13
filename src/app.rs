@@ -10,10 +10,17 @@ use std::{error::Error, fs::File, path::PathBuf};
 #[derive(Default, Serialize, Deserialize)]
 pub struct TodoApp {
     topic_sel: Option<usize>,
+    topics: Vec<Topic>,
+    #[serde(skip)]
+    temp: TodoAppTemp,
+}
+
+/// Transient data, not saved during serialization
+#[derive(Default)]
+struct TodoAppTemp {
     adding_topic: bool,
     adding_task: bool,
     new_add_string_buf: String,
-    topics: Vec<Topic>,
 }
 
 fn file_name() -> PathBuf {
@@ -65,29 +72,29 @@ impl epi::App for TodoApp {
                         }
                     });
                     ui.horizontal(|ui| {
-                        if self.adding_topic {
+                        if self.temp.adding_topic {
                             let clicked = ui.button("✔").clicked();
                             if ui.button("🗙").clicked() || ui.input().key_pressed(egui::Key::Escape)
                             {
-                                self.adding_topic = false;
-                                self.new_add_string_buf.clear();
+                                self.temp.adding_topic = false;
+                                self.temp.new_add_string_buf.clear();
                             }
-                            ui.text_edit_singleline(&mut self.new_add_string_buf)
+                            ui.text_edit_singleline(&mut self.temp.new_add_string_buf)
                                 .request_focus();
                             if clicked || ui.input().key_pressed(egui::Key::Enter) {
                                 self.topics.push(Topic {
-                                    name: self.new_add_string_buf.take(),
+                                    name: self.temp.new_add_string_buf.take(),
                                     desc: String::new(),
                                     tasks: Vec::new(),
                                     task_sel: None,
                                 });
-                                self.adding_topic = false;
+                                self.temp.adding_topic = false;
                                 self.topic_sel = Some(self.topics.len() - 1);
                             }
                         } else {
                             ui.horizontal(|ui| {
                                 if ui.button("+").clicked() {
-                                    self.adding_topic = true;
+                                    self.temp.adding_topic = true;
                                 }
                                 if ui
                                     .add_enabled(self.topic_sel.is_some(), egui::Button::new("-"))
@@ -156,31 +163,31 @@ impl epi::App for TodoApp {
                                 }
                             });
                         ui.horizontal(|ui| {
-                            if self.adding_task {
+                            if self.temp.adding_task {
                                 let clicked = ui.button("✔").clicked();
                                 if ui.button("🗙").clicked()
                                     || ui.input().key_pressed(egui::Key::Escape)
                                 {
-                                    self.adding_task = false;
-                                    self.new_add_string_buf.clear();
+                                    self.temp.adding_task = false;
+                                    self.temp.new_add_string_buf.clear();
                                 }
-                                ui.text_edit_singleline(&mut self.new_add_string_buf)
+                                ui.text_edit_singleline(&mut self.temp.new_add_string_buf)
                                     .request_focus();
                                 if clicked || ui.input().key_pressed(egui::Key::Enter) {
                                     topic!().tasks.push(Task {
-                                        title: self.new_add_string_buf.take(),
+                                        title: self.temp.new_add_string_buf.take(),
                                         desc: String::new(),
                                         done: false,
                                         attachments: Vec::new(),
                                     });
-                                    self.adding_task = false;
+                                    self.temp.adding_task = false;
                                     topic!().task_sel = Some(topic!().tasks.len() - 1);
                                 }
                             } else {
                                 if ui.button("+").clicked()
                                     || ui.input().key_pressed(egui::Key::Insert)
                                 {
-                                    self.adding_task = true;
+                                    self.temp.adding_task = true;
                                 }
                                 if ui.button("-").clicked() {
                                     if let Some(task_sel) = topic!().task_sel {
