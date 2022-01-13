@@ -44,7 +44,7 @@ impl epi::App for TodoApp {
         TodoApp::save(self).unwrap();
     }
 
-    fn update(&mut self, ctx: &egui::CtxRef, frame: &epi::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         if ctx.input().key_pressed(Key::Escape) {
             frame.quit();
         }
