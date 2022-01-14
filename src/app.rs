@@ -40,6 +40,10 @@ enum UiState {
         src_idx: Vec<usize>,
     },
     MoveTaskIntoTopic(Task),
+    RenameTask {
+        topic_idx: Vec<usize>,
+        task_idx: usize,
+    },
 }
 
 impl UiState {
@@ -229,11 +233,35 @@ impl epi::App for TodoApp {
                                         if task.done {
                                             text = text.strikethrough();
                                         }
-                                        if ui
-                                            .selectable_label(topic.task_sel == Some(i), text)
-                                            .clicked()
-                                        {
-                                            topic.task_sel = Some(i);
+                                        match &self.temp.state {
+                                            UiState::RenameTask {
+                                                task_idx,
+                                                topic_idx,
+                                            } if topic_idx == &self.topic_sel
+                                                && Some(*task_idx) == topic.task_sel =>
+                                            {
+                                                if ui
+                                                    .text_edit_singleline(&mut task.title)
+                                                    .lost_focus()
+                                                {
+                                                    self.temp.state = UiState::Normal;
+                                                }
+                                            }
+                                            _ => {
+                                                let re = ui.selectable_label(
+                                                    topic.task_sel == Some(i),
+                                                    text,
+                                                );
+                                                if re.clicked() {
+                                                    topic.task_sel = Some(i);
+                                                }
+                                                if re.double_clicked() {
+                                                    self.temp.state = UiState::RenameTask {
+                                                        topic_idx: self.topic_sel.clone(),
+                                                        task_idx: topic.task_sel.unwrap(),
+                                                    };
+                                                }
+                                            }
                                         }
                                     });
                                 }
