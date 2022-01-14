@@ -14,7 +14,7 @@ pub struct Topic {
     pub children: Vec<Topic>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Task {
     pub title: String,
     pub desc: String,
