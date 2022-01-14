@@ -1,6 +1,6 @@
 use crate::data::{Attachment, Task, Topic};
 use eframe::{
-    egui::{self, Button, Key, RichText, ScrollArea, TextBuffer},
+    egui::{self, Button, CollapsingHeader, Key, RichText, ScrollArea, TextBuffer},
     epi,
 };
 use rmp_serde::Serializer;
@@ -9,18 +9,49 @@ use std::{error::Error, fs::File, path::PathBuf};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TodoApp {
-    topic_sel: Option<usize>,
+    topic_sel: Vec<usize>,
     topics: Vec<Topic>,
     #[serde(skip)]
     temp: TodoAppTemp,
 }
 
 /// Transient data, not saved during serialization
-#[derive(Default)]
 struct TodoAppTemp {
-    adding_topic: bool,
-    adding_task: bool,
-    new_add_string_buf: String,
+    state: UiState,
+}
+
+impl Default for TodoAppTemp {
+    fn default() -> Self {
+        Self {
+            state: UiState::Normal,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+enum UiState {
+    Normal,
+    AddTopic(String),
+    AddSubtopic {
+        name: String,
+        parent_idx: Vec<usize>,
+    },
+    AddTask(String),
+}
+
+impl UiState {
+    fn add_topic() -> Self {
+        Self::AddTopic(String::default())
+    }
+    fn add_subtopic(parent_idx: Vec<usize>) -> Self {
+        Self::AddSubtopic {
+            name: String::default(),
+            parent_idx,
+        }
+    }
+    fn add_task() -> Self {
+        Self::AddTask(String::default())
+    }
 }
 
 fn file_name() -> PathBuf {
@@ -56,96 +87,113 @@ impl epi::App for TodoApp {
             frame.quit();
         }
         egui::CentralPanel::default().show(ctx, |ui| {
+            ui.label(format!("{:?}", self.topic_sel));
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.set_width(300.0);
                     ui.set_height(400.0);
                     ui.heading("Topics");
                     ScrollArea::vertical().show(ui, |ui| {
-                        for (i, topic) in self.topics.iter().enumerate() {
-                            if ui
-                                .selectable_label(self.topic_sel == Some(i), &topic.name)
-                                .clicked()
-                            {
-                                self.topic_sel = Some(i);
-                            }
-                        }
+                        topics_ui(&self.topics, &mut Vec::new(), &mut self.topic_sel, ui);
                     });
-                    ui.horizontal(|ui| {
-                        if self.temp.adding_topic {
+                    ui.horizontal(|ui| match &mut self.temp.state {
+                        UiState::AddTopic(name) => {
                             let clicked = ui.button("✔").clicked();
                             if ui.button("🗙").clicked() || ui.input().key_pressed(egui::Key::Escape)
                             {
-                                self.temp.adding_topic = false;
-                                self.temp.new_add_string_buf.clear();
+                                self.temp.state = UiState::Normal;
+                            } else {
+                                ui.text_edit_singleline(name).request_focus();
+                                if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                    self.topics.push(Topic {
+                                        name: name.take(),
+                                        desc: String::new(),
+                                        tasks: Vec::new(),
+                                        task_sel: None,
+                                        children: Vec::new(),
+                                    });
+                                    self.temp.state = UiState::Normal;
+                                    // TODO: Do something more reasonable here
+                                    self.topic_sel.clear();
+                                }
                             }
-                            ui.text_edit_singleline(&mut self.temp.new_add_string_buf)
-                                .request_focus();
-                            if clicked || ui.input().key_pressed(egui::Key::Enter) {
-                                self.topics.push(Topic {
-                                    name: self.temp.new_add_string_buf.take(),
-                                    desc: String::new(),
-                                    tasks: Vec::new(),
-                                    task_sel: None,
-                                });
-                                self.temp.adding_topic = false;
-                                self.topic_sel = Some(self.topics.len() - 1);
+                        }
+                        UiState::AddSubtopic { name, parent_idx } => {
+                            let clicked = ui.button("✔").clicked();
+                            if ui.button("🗙").clicked() || ui.input().key_pressed(egui::Key::Escape)
+                            {
+                                self.temp.state = UiState::Normal;
+                            } else {
+                                ui.text_edit_singleline(name).request_focus();
+                                if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                    let topic = get_topic_mut(&mut self.topics, parent_idx);
+                                    topic.children.push(Topic {
+                                        name: name.take(),
+                                        desc: String::new(),
+                                        tasks: Vec::new(),
+                                        task_sel: None,
+                                        children: Vec::new(),
+                                    });
+                                    self.temp.state = UiState::Normal;
+                                    // TODO: Do something more reasonable here
+                                    self.topic_sel.clear();
+                                }
                             }
-                        } else {
+                        }
+                        _ => {
                             ui.horizontal(|ui| {
                                 if ui.button("+").clicked() {
-                                    self.temp.adding_topic = true;
+                                    self.temp.state = UiState::add_topic();
                                 }
                                 if ui
-                                    .add_enabled(self.topic_sel.is_some(), egui::Button::new("-"))
+                                    .add_enabled(!self.topic_sel.is_empty(), egui::Button::new("-"))
                                     .clicked()
                                 {
-                                    if let Some(topic_sel) = self.topic_sel {
-                                        self.topics.remove(topic_sel);
-                                        if self.topics.is_empty() {
-                                            self.topic_sel = None;
-                                        } else {
-                                            self.topic_sel =
-                                                Some(topic_sel.clamp(0, self.topics.len() - 1));
-                                        }
+                                    if !self.topic_sel.is_empty() {
+                                        remove_topic(&mut self.topics, &self.topic_sel);
+                                        // TODO: Do something more reasonable
+                                        self.topic_sel.clear();
                                     }
                                 }
-                                if let Some(topic_sel) = self.topic_sel {
-                                    if ui.add_enabled(topic_sel > 0, Button::new("⬆")).clicked() {
-                                        self.topics.swap(topic_sel, topic_sel - 1);
-                                        self.topic_sel = Some(topic_sel - 1);
+                                if let Some(topic_sel) = self.topic_sel.last_mut() {
+                                    if ui.add_enabled(*topic_sel > 0, Button::new("⬆")).clicked()
+                                    {
+                                        self.topics.swap(*topic_sel, *topic_sel - 1);
+                                        *topic_sel -= 1;
                                     }
                                     if ui
                                         .add_enabled(
-                                            topic_sel < self.topics.len() - 1,
+                                            *topic_sel < self.topics.len() - 1,
                                             Button::new("⬇"),
                                         )
                                         .clicked()
                                     {
-                                        self.topics.swap(topic_sel, topic_sel + 1);
-                                        self.topic_sel = Some(topic_sel + 1);
+                                        self.topics.swap(*topic_sel, *topic_sel + 1);
+                                        *topic_sel += 1;
+                                    }
+                                    if ui.button("Add subtopic").clicked() {
+                                        self.temp.state =
+                                            UiState::add_subtopic(self.topic_sel.clone());
                                     }
                                 }
                             });
                         }
                     });
-                    if let Some(sel) = self.topic_sel {
+                    if let Some(sel) = self.topic_sel.pop() {
                         ui.heading("Topic Description");
                         ui.text_edit_multiline(&mut self.topics[sel].desc);
+                        self.topic_sel.push(sel);
                     }
                 });
                 ui.vertical(|ui| {
                     ui.set_width(300.0);
                     ui.set_height(400.0);
                     ui.heading("Tasks");
-                    if let Some(topic_sel) = self.topic_sel {
-                        macro topic() {
-                            self.topics[topic_sel]
-                        }
+                    if !self.topic_sel.is_empty() {
                         ScrollArea::vertical()
                             .id_source("task_scroll")
                             .show(ui, |ui| {
-                                let topic = &mut topic!();
+                                let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
                                 for (i, task) in topic.tasks.iter_mut().enumerate() {
                                     ui.horizontal(|ui| {
                                         ui.checkbox(&mut task.done, "");
@@ -163,65 +211,112 @@ impl epi::App for TodoApp {
                                 }
                             });
                         ui.horizontal(|ui| {
-                            if self.temp.adding_task {
+                            if let UiState::AddTask(name) = &mut self.temp.state {
                                 let clicked = ui.button("✔").clicked();
                                 if ui.button("🗙").clicked()
                                     || ui.input().key_pressed(egui::Key::Escape)
                                 {
-                                    self.temp.adding_task = false;
-                                    self.temp.new_add_string_buf.clear();
-                                }
-                                ui.text_edit_singleline(&mut self.temp.new_add_string_buf)
-                                    .request_focus();
-                                if clicked || ui.input().key_pressed(egui::Key::Enter) {
-                                    topic!().tasks.push(Task {
-                                        title: self.temp.new_add_string_buf.take(),
-                                        desc: String::new(),
-                                        done: false,
-                                        attachments: Vec::new(),
-                                    });
-                                    self.temp.adding_task = false;
-                                    topic!().task_sel = Some(topic!().tasks.len() - 1);
+                                    self.temp.state = UiState::Normal;
+                                } else {
+                                    ui.text_edit_singleline(name).request_focus();
+                                    if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                        get_topic_mut(&mut self.topics, &self.topic_sel)
+                                            .tasks
+                                            .push(Task {
+                                                title: name.take(),
+                                                desc: String::new(),
+                                                done: false,
+                                                attachments: Vec::new(),
+                                            });
+                                        self.temp.state = UiState::Normal;
+                                        get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
+                                            Some(
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .tasks
+                                                    .len()
+                                                    - 1,
+                                            );
+                                    }
                                 }
                             } else {
                                 if ui.button("+").clicked()
                                     || ui.input().key_pressed(egui::Key::Insert)
                                 {
-                                    self.temp.adding_task = true;
+                                    self.temp.state = UiState::add_task();
                                 }
                                 if ui.button("-").clicked() {
-                                    if let Some(task_sel) = topic!().task_sel {
-                                        topic!().tasks.remove(task_sel);
-                                        if topic!().tasks.is_empty() {
-                                            topic!().task_sel = None;
+                                    if let Some(task_sel) =
+                                        get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
+                                    {
+                                        get_topic_mut(&mut self.topics, &self.topic_sel)
+                                            .tasks
+                                            .remove(task_sel);
+                                        if get_topic_mut(&mut self.topics, &self.topic_sel)
+                                            .tasks
+                                            .is_empty()
+                                        {
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .task_sel = None;
                                         } else {
-                                            topic!().task_sel =
-                                                Some(task_sel.clamp(0, topic!().tasks.len() - 1));
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .task_sel = Some(
+                                                task_sel.clamp(
+                                                    0,
+                                                    get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
+                                                    .tasks
+                                                    .len()
+                                                        - 1,
+                                                ),
+                                            );
                                         }
                                     }
                                 }
                             }
-                            if let Some(task_sel) = topic!().task_sel {
+                            if let Some(task_sel) =
+                                get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
+                            {
                                 if ui.add_enabled(task_sel > 0, Button::new("⬆")).clicked() {
-                                    topic!().tasks.swap(task_sel, task_sel - 1);
-                                    topic!().task_sel = Some(task_sel - 1);
+                                    get_topic_mut(&mut self.topics, &self.topic_sel)
+                                        .tasks
+                                        .swap(task_sel, task_sel - 1);
+                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
+                                        Some(task_sel - 1);
                                 }
                                 if ui
                                     .add_enabled(
-                                        task_sel < topic!().tasks.len() - 1,
+                                        task_sel
+                                            < get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .tasks
+                                                .len()
+                                                - 1,
                                         Button::new("⬇"),
                                     )
                                     .clicked()
                                 {
-                                    topic!().tasks.swap(task_sel, task_sel + 1);
-                                    topic!().task_sel = Some(task_sel + 1);
+                                    get_topic_mut(&mut self.topics, &self.topic_sel)
+                                        .tasks
+                                        .swap(task_sel, task_sel + 1);
+                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
+                                        Some(task_sel + 1);
                                 }
                             }
                         });
-                        if let Some(task_sel) = topic!().task_sel {
+                        if let Some(task_sel) =
+                            get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
+                        {
                             ui.heading("Task Description");
-                            ui.text_edit_multiline(&mut topic!().tasks[task_sel].desc);
-                            for attachment in &topic!().tasks[task_sel].attachments {
+                            ui.text_edit_multiline(
+                                &mut get_topic_mut(&mut self.topics, &self.topic_sel).tasks
+                                    [task_sel]
+                                    .desc,
+                            );
+                            for attachment in &get_topic_mut(&mut self.topics, &self.topic_sel)
+                                .tasks[task_sel]
+                                .attachments
+                            {
                                 ui.horizontal(|ui| {
                                     ui.label(attachment.filename.display().to_string());
                                     if ui.button("open").clicked() {
@@ -269,10 +364,13 @@ impl epi::App for TodoApp {
                                     for path in paths {
                                         if let Some(filename) = path.file_name() {
                                             let data = std::fs::read(&path).unwrap();
-                                            topic!().tasks[task_sel].attachments.push(Attachment {
-                                                filename: filename.into(),
-                                                data,
-                                            })
+                                            get_topic_mut(&mut self.topics, &self.topic_sel).tasks
+                                                [task_sel]
+                                                .attachments
+                                                .push(Attachment {
+                                                    filename: filename.into(),
+                                                    data,
+                                                })
                                         } else {
                                             error_msgbox(&format!(
                                                 "Could not determine filename for file {:?}",
@@ -288,6 +386,61 @@ impl epi::App for TodoApp {
             });
         });
     }
+}
+
+fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> &'t mut Topic {
+    for i in 0..indices.len() {
+        let idx = indices[i];
+        if i == indices.len() - 1 {
+            return &mut topics[idx];
+        } else {
+            topics = &mut topics[idx].children;
+        }
+    }
+    unreachable!()
+}
+
+fn remove_topic(mut topics: &mut Vec<Topic>, indices: &[usize]) {
+    for i in 0..indices.len() {
+        let idx = indices[i];
+        if i == indices.len() - 1 {
+            topics.remove(idx);
+        } else {
+            topics = &mut topics[idx].children;
+        }
+    }
+}
+
+fn topics_ui(
+    topics: &[Topic],
+    cursor: &mut Vec<usize>,
+    topic_sel: &mut Vec<usize>,
+    ui: &mut egui::Ui,
+) {
+    cursor.push(0);
+    for (i, topic) in topics.iter().enumerate() {
+        *cursor.last_mut().unwrap() = i;
+        ui.label(format!("{:?}", cursor));
+        if topic.children.is_empty() {
+            if ui
+                .selectable_label(*topic_sel == *cursor, &topic.name)
+                .clicked()
+            {
+                *topic_sel = cursor.clone();
+            }
+        } else {
+            let re = CollapsingHeader::new(&topic.name)
+                .selectable(true)
+                .selected(*topic_sel == *cursor)
+                .show(ui, |ui| {
+                    topics_ui(&topic.children, cursor, topic_sel, ui);
+                });
+            if re.header_response.clicked() {
+                *topic_sel = cursor.clone();
+            }
+        }
+    }
+    cursor.pop();
 }
 
 fn error_msgbox(msg: &str) {

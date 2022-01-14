@@ -9,6 +9,9 @@ pub struct Topic {
     pub tasks: Vec<Task>,
     /// Each topic remembers what task was last selected
     pub task_sel: Option<usize>,
+    /// Child topics, if any
+    #[serde(default)]
+    pub children: Vec<Topic>,
 }
 
 #[derive(Serialize, Deserialize)]
