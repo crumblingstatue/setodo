@@ -87,7 +87,6 @@ impl epi::App for TodoApp {
             frame.quit();
         }
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label(format!("{:?}", self.topic_sel));
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.set_width(300.0);
@@ -420,7 +419,6 @@ fn topics_ui(
     cursor.push(0);
     for (i, topic) in topics.iter().enumerate() {
         *cursor.last_mut().unwrap() = i;
-        ui.label(format!("{:?}", cursor));
         if topic.children.is_empty() {
             if ui
                 .selectable_label(*topic_sel == *cursor, &topic.name)
