@@ -40,6 +40,9 @@ enum UiState {
         src_idx: Vec<usize>,
     },
     MoveTaskIntoTopic(Task),
+    RenameTopic {
+        idx: Vec<usize>,
+    },
     RenameTask {
         topic_idx: Vec<usize>,
         task_idx: usize,
@@ -104,8 +107,13 @@ impl epi::App for TodoApp {
                     ui.heading("Topics");
                     let mut any_clicked = false;
                     ScrollArea::vertical().show(ui, |ui| {
-                        any_clicked =
-                            topics_ui(&self.topics, &mut Vec::new(), &mut self.topic_sel, ui);
+                        any_clicked = topics_ui(
+                            &mut self.topics,
+                            &mut Vec::new(),
+                            &mut self.topic_sel,
+                            ui,
+                            &mut self.temp.state,
+                        );
                     });
                     ui.horizontal(|ui| match &mut self.temp.state {
                         UiState::AddTopic(name) => {
@@ -503,33 +511,52 @@ fn insert_topic(mut topics: &mut Vec<Topic>, indices: &[usize], topic: Topic) {
 }
 
 fn topics_ui(
-    topics: &[Topic],
+    topics: &mut [Topic],
     cursor: &mut Vec<usize>,
     topic_sel: &mut Vec<usize>,
     ui: &mut egui::Ui,
+    state: &mut UiState,
 ) -> bool {
     let mut any_clicked = false;
     cursor.push(0);
-    for (i, topic) in topics.iter().enumerate() {
+    for (i, topic) in topics.iter_mut().enumerate() {
         *cursor.last_mut().unwrap() = i;
-        if topic.children.is_empty() {
-            if ui
-                .selectable_label(*topic_sel == *cursor, &topic.name)
-                .clicked()
-            {
-                any_clicked = true;
-                *topic_sel = cursor.clone();
+        match state {
+            UiState::RenameTopic { idx } if idx == cursor => {
+                if ui.text_edit_singleline(&mut topic.name).lost_focus() {
+                    *state = UiState::Normal;
+                }
             }
-        } else {
-            let re = CollapsingHeader::new(&topic.name)
-                .selectable(true)
-                .selected(*topic_sel == *cursor)
-                .show(ui, |ui| {
-                    any_clicked |= topics_ui(&topic.children, cursor, topic_sel, ui);
-                });
-            if re.header_response.clicked() {
-                *topic_sel = cursor.clone();
-                any_clicked = true;
+            _ => {
+                if topic.children.is_empty() {
+                    let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
+                    if re.clicked() {
+                        any_clicked = true;
+                        *topic_sel = cursor.clone();
+                    }
+                    if re.double_clicked() {
+                        *state = UiState::RenameTopic {
+                            idx: cursor.clone(),
+                        }
+                    }
+                } else {
+                    let re = CollapsingHeader::new(&topic.name)
+                        .selectable(true)
+                        .selected(*topic_sel == *cursor)
+                        .show(ui, |ui| {
+                            any_clicked |=
+                                topics_ui(&mut topic.children, cursor, topic_sel, ui, state);
+                        });
+                    if re.header_response.clicked() {
+                        *topic_sel = cursor.clone();
+                        any_clicked = true;
+                    }
+                    if re.header_response.double_clicked() {
+                        *state = UiState::RenameTopic {
+                            idx: cursor.clone(),
+                        }
+                    }
+                }
             }
         }
     }
