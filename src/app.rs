@@ -162,6 +162,7 @@ impl epi::App for TodoApp {
                                     std::mem::take(task),
                                     &self.topic_sel,
                                 );
+                                self.temp.state = UiState::Normal;
                             }
                         }
                         _ => {
@@ -337,6 +338,8 @@ impl epi::App for TodoApp {
                                     let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
                                     self.temp.state =
                                         UiState::MoveTaskIntoTopic(topic.tasks.remove(task_sel));
+                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
+                                        None;
                                 }
                             }
                         });
