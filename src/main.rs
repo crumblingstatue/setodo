@@ -1,7 +1,7 @@
 #![feature(decl_macro)]
 
 use app::TodoApp;
-use eframe::egui;
+use eframe::egui::{self, Visuals};
 
 mod app;
 mod data;
@@ -14,7 +14,8 @@ fn main() {
     eframe::run_native(
         "Simple egui todo",
         native_options,
-        Box::new(|_| {
+        Box::new(|ctx| {
+            ctx.egui_ctx.set_visuals(Visuals::dark());
             let app = match TodoApp::load() {
                 Ok(app) => app,
                 Err(e) => {
