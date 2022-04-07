@@ -87,15 +87,11 @@ impl TodoApp {
 }
 
 impl epi::App for TodoApp {
-    fn name(&self) -> &str {
-        "Simple Egui Todo"
-    }
-
-    fn on_exit(&mut self) {
+    fn on_exit(&mut self, _ctx: &eframe::glow::Context) {
         TodoApp::save(self).unwrap();
     }
 
-    fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut epi::Frame) {
         if ctx.input().key_pressed(Key::Escape) {
             frame.quit();
         }
