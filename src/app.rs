@@ -241,9 +241,7 @@ impl epi::App for TodoApp {
                                             UiState::RenameTask {
                                                 task_idx,
                                                 topic_idx,
-                                            } if topic_idx == &self.topic_sel
-                                                && Some(*task_idx) == topic.task_sel =>
-                                            {
+                                            } if topic_idx == &self.topic_sel && i == *task_idx => {
                                                 if ui
                                                     .text_edit_singleline(&mut task.title)
                                                     .lost_focus()
