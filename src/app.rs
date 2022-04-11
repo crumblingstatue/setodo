@@ -222,8 +222,6 @@ impl epi::App for TodoApp {
                     }
                 });
                 ui.vertical(|ui| {
-                    ui.set_width(300.0);
-                    ui.set_height(400.0);
                     ui.heading("Tasks");
                     if !self.topic_sel.is_empty() {
                         ScrollArea::vertical()
