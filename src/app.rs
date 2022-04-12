@@ -1,6 +1,6 @@
 use crate::data::{Attachment, Task, Topic};
 use eframe::{
-    egui::{self, Button, CollapsingHeader, Key, RichText, ScrollArea, TextBuffer},
+    egui::{self, Button, CollapsingHeader, Key, RichText, ScrollArea, TextBuffer, TextEdit},
     epi,
 };
 use rmp_serde::Serializer;
@@ -96,137 +96,148 @@ impl epi::App for TodoApp {
             frame.quit();
         }
         egui::CentralPanel::default().show(ctx, |ui| {
+            let cp_avail_height = ui.available_height();
             ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.set_width(300.0);
-                    ui.set_height(400.0);
-                    ui.heading("Topics");
-                    let mut any_clicked = false;
-                    ScrollArea::vertical().show(ui, |ui| {
-                        any_clicked = topics_ui(
-                            &mut self.topics,
-                            &mut Vec::new(),
-                            &mut self.topic_sel,
-                            ui,
-                            &mut self.temp.state,
-                        );
-                    });
-                    ui.horizontal(|ui| match &mut self.temp.state {
-                        UiState::AddTopic(name) => {
-                            let clicked = ui.button("✔").clicked();
-                            if ui.button("🗙").clicked() || ui.input().key_pressed(egui::Key::Escape)
-                            {
-                                self.temp.state = UiState::Normal;
-                            } else {
-                                ui.text_edit_singleline(name).request_focus();
-                                if clicked || ui.input().key_pressed(egui::Key::Enter) {
-                                    self.topics.push(Topic {
-                                        name: name.take(),
-                                        desc: String::new(),
-                                        tasks: Vec::new(),
-                                        task_sel: None,
-                                        children: Vec::new(),
-                                    });
-                                    self.temp.state = UiState::Normal;
-                                    // TODO: Do something more reasonable here
-                                    self.topic_sel.clear();
-                                }
-                            }
-                        }
-                        UiState::AddSubtopic { name, parent_idx } => {
-                            let clicked = ui.button("✔").clicked();
-                            if ui.button("🗙").clicked() || ui.input().key_pressed(egui::Key::Escape)
-                            {
-                                self.temp.state = UiState::Normal;
-                            } else {
-                                ui.text_edit_singleline(name).request_focus();
-                                if clicked || ui.input().key_pressed(egui::Key::Enter) {
-                                    let topic = get_topic_mut(&mut self.topics, parent_idx);
-                                    topic.children.push(Topic {
-                                        name: name.take(),
-                                        desc: String::new(),
-                                        tasks: Vec::new(),
-                                        task_sel: None,
-                                        children: Vec::new(),
-                                    });
-                                    self.temp.state = UiState::Normal;
-                                    // TODO: Do something more reasonable here
-                                    self.topic_sel.clear();
-                                }
-                            }
-                        }
-                        UiState::MoveTopicInto { src_idx } => {
-                            ui.label("Click on topic to move into!");
-                            ui.label(any_clicked.to_string());
-                            if any_clicked {
-                                move_topic(&mut self.topics, src_idx, &self.topic_sel);
-                                self.temp.state = UiState::Normal;
-                            }
-                        }
-                        UiState::MoveTaskIntoTopic(task) => {
-                            if any_clicked {
-                                move_task_into_topic(
-                                    &mut self.topics,
-                                    std::mem::take(task),
-                                    &self.topic_sel,
-                                );
-                                self.temp.state = UiState::Normal;
-                            }
-                        }
-                        _ => {
-                            ui.horizontal(|ui| {
-                                if ui.button("+").clicked() {
-                                    self.temp.state = UiState::add_topic();
-                                }
-                                if ui
-                                    .add_enabled(!self.topic_sel.is_empty(), egui::Button::new("-"))
-                                    .clicked()
-                                    && !self.topic_sel.is_empty()
-                                {
-                                    remove_topic(&mut self.topics, &self.topic_sel);
-                                    // TODO: Do something more reasonable
-                                    self.topic_sel.clear();
-                                }
-                                if let Some(topic_sel) = self.topic_sel.last_mut() {
-                                    if ui.add_enabled(*topic_sel > 0, Button::new("⬆")).clicked()
+                ui.set_min_height(cp_avail_height);
+                ScrollArea::vertical()
+                    .id_source("topics_scroll")
+                    .show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.heading("Topics");
+                            let any_clicked = topics_ui(
+                                &mut self.topics,
+                                &mut Vec::new(),
+                                &mut self.topic_sel,
+                                ui,
+                                &mut self.temp.state,
+                            );
+                            ui.horizontal(|ui| match &mut self.temp.state {
+                                UiState::AddTopic(name) => {
+                                    let clicked = ui.button("✔").clicked();
+                                    if ui.button("🗙").clicked()
+                                        || ui.input().key_pressed(egui::Key::Escape)
                                     {
-                                        self.topics.swap(*topic_sel, *topic_sel - 1);
-                                        *topic_sel -= 1;
+                                        self.temp.state = UiState::Normal;
+                                    } else {
+                                        ui.text_edit_singleline(name).request_focus();
+                                        if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                            self.topics.push(Topic {
+                                                name: name.take(),
+                                                desc: String::new(),
+                                                tasks: Vec::new(),
+                                                task_sel: None,
+                                                children: Vec::new(),
+                                            });
+                                            self.temp.state = UiState::Normal;
+                                            // TODO: Do something more reasonable here
+                                            self.topic_sel.clear();
+                                        }
                                     }
-                                    if ui
-                                        .add_enabled(
-                                            *topic_sel < self.topics.len() - 1,
-                                            Button::new("⬇"),
-                                        )
-                                        .clicked()
+                                }
+                                UiState::AddSubtopic { name, parent_idx } => {
+                                    let clicked = ui.button("✔").clicked();
+                                    if ui.button("🗙").clicked()
+                                        || ui.input().key_pressed(egui::Key::Escape)
                                     {
-                                        self.topics.swap(*topic_sel, *topic_sel + 1);
-                                        *topic_sel += 1;
+                                        self.temp.state = UiState::Normal;
+                                    } else {
+                                        ui.text_edit_singleline(name).request_focus();
+                                        if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                            let topic = get_topic_mut(&mut self.topics, parent_idx);
+                                            topic.children.push(Topic {
+                                                name: name.take(),
+                                                desc: String::new(),
+                                                tasks: Vec::new(),
+                                                task_sel: None,
+                                                children: Vec::new(),
+                                            });
+                                            self.temp.state = UiState::Normal;
+                                            // TODO: Do something more reasonable here
+                                            self.topic_sel.clear();
+                                        }
                                     }
-                                    if ui.button("Add subtopic").clicked() {
-                                        self.temp.state =
-                                            UiState::add_subtopic(self.topic_sel.clone());
+                                }
+                                UiState::MoveTopicInto { src_idx } => {
+                                    ui.label("Click on topic to move into!");
+                                    ui.label(any_clicked.to_string());
+                                    if any_clicked {
+                                        move_topic(&mut self.topics, src_idx, &self.topic_sel);
+                                        self.temp.state = UiState::Normal;
                                     }
-                                    if ui.button("Move topic into").clicked() {
-                                        self.temp.state =
-                                            UiState::move_topic_into(self.topic_sel.clone());
+                                }
+                                UiState::MoveTaskIntoTopic(task) => {
+                                    if any_clicked {
+                                        move_task_into_topic(
+                                            &mut self.topics,
+                                            std::mem::take(task),
+                                            &self.topic_sel,
+                                        );
+                                        self.temp.state = UiState::Normal;
                                     }
+                                }
+                                _ => {
+                                    ui.horizontal(|ui| {
+                                        if ui.button("+").clicked() {
+                                            self.temp.state = UiState::add_topic();
+                                        }
+                                        if ui
+                                            .add_enabled(
+                                                !self.topic_sel.is_empty(),
+                                                egui::Button::new("-"),
+                                            )
+                                            .clicked()
+                                            && !self.topic_sel.is_empty()
+                                        {
+                                            remove_topic(&mut self.topics, &self.topic_sel);
+                                            // TODO: Do something more reasonable
+                                            self.topic_sel.clear();
+                                        }
+                                        if let Some(topic_sel) = self.topic_sel.last_mut() {
+                                            if ui
+                                                .add_enabled(*topic_sel > 0, Button::new("⬆"))
+                                                .clicked()
+                                            {
+                                                self.topics.swap(*topic_sel, *topic_sel - 1);
+                                                *topic_sel -= 1;
+                                            }
+                                            if ui
+                                                .add_enabled(
+                                                    *topic_sel < self.topics.len() - 1,
+                                                    Button::new("⬇"),
+                                                )
+                                                .clicked()
+                                            {
+                                                self.topics.swap(*topic_sel, *topic_sel + 1);
+                                                *topic_sel += 1;
+                                            }
+                                            if ui.button("Add subtopic").clicked() {
+                                                self.temp.state =
+                                                    UiState::add_subtopic(self.topic_sel.clone());
+                                            }
+                                            if ui.button("Move topic into").clicked() {
+                                                self.temp.state = UiState::move_topic_into(
+                                                    self.topic_sel.clone(),
+                                                );
+                                            }
+                                        }
+                                    });
                                 }
                             });
-                        }
+                            if !self.topic_sel.is_empty() {
+                                ui.heading("Topic Description");
+                                let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
+                                ui.text_edit_multiline(&mut topic.desc);
+                            }
+                        });
                     });
-                    if !self.topic_sel.is_empty() {
-                        ui.heading("Topic Description");
-                        let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
-                        ui.text_edit_multiline(&mut topic.desc);
-                    }
-                });
-                ui.vertical(|ui| {
-                    ui.heading("Tasks");
-                    if !self.topic_sel.is_empty() {
-                        ScrollArea::vertical()
-                            .id_source("task_scroll")
-                            .show(ui, |ui| {
+                let cp_avail_width = ui.available_width();
+                ScrollArea::vertical()
+                    .auto_shrink([false; 2])
+                    .id_source("tasks_scroll")
+                    .show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            ui.heading("Tasks");
+                            if !self.topic_sel.is_empty() {
                                 let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
                                 for (i, task) in topic.tasks.iter_mut().enumerate() {
                                     ui.horizontal(|ui| {
@@ -265,62 +276,36 @@ impl epi::App for TodoApp {
                                         }
                                     });
                                 }
-                            });
-                        ui.horizontal(|ui| {
-                            match &mut self.temp.state {
-                                UiState::AddTask(name) => {
-                                    let clicked = ui.button("✔").clicked();
-                                    if ui.button("🗙").clicked()
-                                        || ui.input().key_pressed(egui::Key::Escape)
-                                    {
-                                        self.temp.state = UiState::Normal;
-                                    } else {
-                                        ui.text_edit_singleline(name).request_focus();
-                                        if clicked || ui.input().key_pressed(egui::Key::Enter) {
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .tasks
-                                                .push(Task {
-                                                    title: name.take(),
-                                                    desc: String::new(),
-                                                    done: false,
-                                                    attachments: Vec::new(),
-                                                });
-                                            self.temp.state = UiState::Normal;
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .task_sel = Some(
-                                                get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                    .tasks
-                                                    .len()
-                                                    - 1,
-                                            );
-                                        }
-                                    }
-                                }
-                                _ => {
-                                    if ui.button("+").clicked()
-                                        || ui.input().key_pressed(egui::Key::Insert)
-                                    {
-                                        self.temp.state = UiState::add_task();
-                                    }
-                                    if ui.button("-").clicked() {
-                                        if let Some(task_sel) =
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .task_sel
-                                        {
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .tasks
-                                                .remove(task_sel);
-                                            if get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .tasks
-                                                .is_empty()
+                                ui.horizontal(|ui| {
+                                    match &mut self.temp.state {
+                                        UiState::AddTask(name) => {
+                                            let clicked = ui.button("✔").clicked();
+                                            if ui.button("🗙").clicked()
+                                                || ui.input().key_pressed(egui::Key::Escape)
                                             {
-                                                get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                    .task_sel = None;
+                                                self.temp.state = UiState::Normal;
                                             } else {
-                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                ui.text_edit_singleline(name).request_focus();
+                                                if clicked
+                                                    || ui.input().key_pressed(egui::Key::Enter)
+                                                {
+                                                    get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
+                                                    .tasks
+                                                    .push(Task {
+                                                        title: name.take(),
+                                                        desc: String::new(),
+                                                        done: false,
+                                                        attachments: Vec::new(),
+                                                    });
+                                                    self.temp.state = UiState::Normal;
+                                                    get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
                                                     .task_sel = Some(
-                                                    task_sel.clamp(
-                                                        0,
                                                         get_topic_mut(
                                                             &mut self.topics,
                                                             &self.topic_sel,
@@ -328,128 +313,186 @@ impl epi::App for TodoApp {
                                                         .tasks
                                                         .len()
                                                             - 1,
-                                                    ),
-                                                );
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        _ => {
+                                            if ui.button("+").clicked()
+                                                || ui.input().key_pressed(egui::Key::Insert)
+                                            {
+                                                self.temp.state = UiState::add_task();
+                                            }
+                                            if ui.button("-").clicked() {
+                                                if let Some(task_sel) =
+                                                    get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                        .task_sel
+                                                {
+                                                    get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
+                                                    .tasks
+                                                    .remove(task_sel);
+                                                    if get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
+                                                    .tasks
+                                                    .is_empty()
+                                                    {
+                                                        get_topic_mut(
+                                                            &mut self.topics,
+                                                            &self.topic_sel,
+                                                        )
+                                                        .task_sel = None;
+                                                    } else {
+                                                        get_topic_mut(
+                                                            &mut self.topics,
+                                                            &self.topic_sel,
+                                                        )
+                                                        .task_sel = Some(
+                                                            task_sel.clamp(
+                                                                0,
+                                                                get_topic_mut(
+                                                                    &mut self.topics,
+                                                                    &self.topic_sel,
+                                                                )
+                                                                .tasks
+                                                                .len()
+                                                                    - 1,
+                                                            ),
+                                                        );
+                                                    }
+                                                }
                                             }
                                         }
                                     }
-                                }
-                            }
-                            if let Some(task_sel) =
-                                get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
-                            {
-                                if ui.add_enabled(task_sel > 0, Button::new("⬆")).clicked() {
-                                    get_topic_mut(&mut self.topics, &self.topic_sel)
-                                        .tasks
-                                        .swap(task_sel, task_sel - 1);
-                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
-                                        Some(task_sel - 1);
-                                }
-                                if ui
-                                    .add_enabled(
-                                        task_sel
-                                            < get_topic_mut(&mut self.topics, &self.topic_sel)
+                                    if let Some(task_sel) =
+                                        get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
+                                    {
+                                        if ui.add_enabled(task_sel > 0, Button::new("⬆")).clicked()
+                                        {
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
                                                 .tasks
-                                                .len()
-                                                - 1,
-                                        Button::new("⬇"),
-                                    )
-                                    .clicked()
-                                {
-                                    get_topic_mut(&mut self.topics, &self.topic_sel)
-                                        .tasks
-                                        .swap(task_sel, task_sel + 1);
-                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
-                                        Some(task_sel + 1);
-                                }
-                                if ui.button("Move task into topic").clicked() {
-                                    let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
-                                    self.temp.state =
-                                        UiState::MoveTaskIntoTopic(topic.tasks.remove(task_sel));
-                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel =
-                                        None;
-                                }
-                            }
-                        });
-                        if let Some(task_sel) =
-                            get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
-                        {
-                            ui.heading("Task Description");
-                            ui.text_edit_multiline(
-                                &mut get_topic_mut(&mut self.topics, &self.topic_sel).tasks
-                                    [task_sel]
-                                    .desc,
-                            );
-                            for attachment in &get_topic_mut(&mut self.topics, &self.topic_sel)
-                                .tasks[task_sel]
-                                .attachments
-                            {
-                                ui.horizontal(|ui| {
-                                    ui.label(attachment.filename.display().to_string());
-                                    if ui.button("open").clicked() {
-                                        let tmp_dir = std::env::temp_dir();
-                                        let save_dir = tmp_dir.join("setodo-attachments");
-                                        let path = save_dir.join(&attachment.filename);
-                                        let dir_exists;
-                                        if save_dir.exists() {
-                                            dir_exists = true;
-                                        } else {
-                                            match std::fs::create_dir(save_dir) {
-                                                Ok(_) => {
-                                                    dir_exists = true;
-                                                }
-                                                Err(e) => {
-                                                    error_msgbox(&format!(
-                                                        "Failed to create tmp dir: {}",
-                                                        e
-                                                    ));
-                                                    dir_exists = false;
-                                                }
-                                            }
+                                                .swap(task_sel, task_sel - 1);
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .task_sel = Some(task_sel - 1);
                                         }
-                                        if dir_exists {
-                                            match std::fs::write(&path, &attachment.data) {
-                                                Ok(_) => {
-                                                    if let Err(e) = open::that(path) {
-                                                        error_msgbox(&format!(
-                                                            "Failed to open file: {}",
-                                                            e
-                                                        ))
-                                                    }
-                                                }
-                                                Err(e) => error_msgbox(&format!(
-                                                    "Failed to save file: {}",
-                                                    e
-                                                )),
-                                            }
+                                        if ui
+                                            .add_enabled(
+                                                task_sel
+                                                    < get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
+                                                    .tasks
+                                                    .len()
+                                                        - 1,
+                                                Button::new("⬇"),
+                                            )
+                                            .clicked()
+                                        {
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .tasks
+                                                .swap(task_sel, task_sel + 1);
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .task_sel = Some(task_sel + 1);
+                                        }
+                                        if ui.button("Move task into topic").clicked() {
+                                            let topic =
+                                                get_topic_mut(&mut self.topics, &self.topic_sel);
+                                            self.temp.state = UiState::MoveTaskIntoTopic(
+                                                topic.tasks.remove(task_sel),
+                                            );
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .task_sel = None;
                                         }
                                     }
                                 });
-                            }
-                            if ui.button("Attach files").clicked() {
-                                if let Some(paths) = rfd::FileDialog::new().pick_files() {
-                                    for path in paths {
-                                        if let Some(filename) = path.file_name() {
-                                            let data = std::fs::read(&path).unwrap();
-                                            get_topic_mut(&mut self.topics, &self.topic_sel).tasks
-                                                [task_sel]
-                                                .attachments
-                                                .push(Attachment {
-                                                    filename: filename.into(),
-                                                    data,
-                                                })
-                                        } else {
-                                            error_msgbox(&format!(
-                                                "Could not determine filename for file {:?}",
-                                                path
-                                            ));
+                                if let Some(task_sel) =
+                                    get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
+                                {
+                                    ui.heading("Task Description");
+                                    let te = TextEdit::multiline(
+                                        &mut get_topic_mut(&mut self.topics, &self.topic_sel).tasks
+                                            [task_sel]
+                                            .desc,
+                                    )
+                                    .desired_width(cp_avail_width);
+                                    ui.add(te);
+                                    for attachment in
+                                        &get_topic_mut(&mut self.topics, &self.topic_sel).tasks
+                                            [task_sel]
+                                            .attachments
+                                    {
+                                        ui.horizontal(|ui| {
+                                            ui.label(attachment.filename.display().to_string());
+                                            if ui.button("open").clicked() {
+                                                let tmp_dir = std::env::temp_dir();
+                                                let save_dir = tmp_dir.join("setodo-attachments");
+                                                let path = save_dir.join(&attachment.filename);
+                                                let dir_exists;
+                                                if save_dir.exists() {
+                                                    dir_exists = true;
+                                                } else {
+                                                    match std::fs::create_dir(save_dir) {
+                                                        Ok(_) => {
+                                                            dir_exists = true;
+                                                        }
+                                                        Err(e) => {
+                                                            error_msgbox(&format!(
+                                                                "Failed to create tmp dir: {}",
+                                                                e
+                                                            ));
+                                                            dir_exists = false;
+                                                        }
+                                                    }
+                                                }
+                                                if dir_exists {
+                                                    match std::fs::write(&path, &attachment.data) {
+                                                        Ok(_) => {
+                                                            if let Err(e) = open::that(path) {
+                                                                error_msgbox(&format!(
+                                                                    "Failed to open file: {}",
+                                                                    e
+                                                                ))
+                                                            }
+                                                        }
+                                                        Err(e) => error_msgbox(&format!(
+                                                            "Failed to save file: {}",
+                                                            e
+                                                        )),
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+                                    if ui.button("Attach files").clicked() {
+                                        if let Some(paths) = rfd::FileDialog::new().pick_files() {
+                                            for path in paths {
+                                                if let Some(filename) = path.file_name() {
+                                                    let data = std::fs::read(&path).unwrap();
+                                                    get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                        .tasks[task_sel]
+                                                        .attachments
+                                                        .push(Attachment {
+                                                            filename: filename.into(),
+                                                            data,
+                                                        })
+                                                } else {
+                                                    error_msgbox(&format!(
+                                                    "Could not determine filename for file {:?}",
+                                                    path
+                                                ));
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
-                });
+                        });
+                    });
             });
         });
     }
