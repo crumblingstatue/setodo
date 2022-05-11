@@ -1,6 +1,9 @@
 use crate::data::{Attachment, Task, Topic};
 use eframe::{
-    egui::{self, Button, CollapsingHeader, Key, RichText, ScrollArea, TextBuffer, TextEdit},
+    egui::{
+        self, collapsing_header::CollapsingState, Button, Key, RichText, ScrollArea, TextBuffer,
+        TextEdit,
+    },
     Frame,
 };
 use rmp_serde::Serializer;
@@ -575,22 +578,24 @@ fn topics_ui(
                         }
                     }
                 } else {
-                    let re = CollapsingHeader::new(&topic.name)
-                        .selectable(true)
-                        .selected(*topic_sel == *cursor)
-                        .show(ui, |ui| {
+                    let id = ui.make_persistent_id("cheader").with(&topic.name);
+                    CollapsingState::load_with_default_open(ui.ctx(), id, false)
+                        .show_header(ui, |ui| {
+                            let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
+                            if re.clicked() {
+                                *topic_sel = cursor.clone();
+                                any_clicked = true;
+                            }
+                            if re.double_clicked() {
+                                *state = UiState::RenameTopic {
+                                    idx: cursor.clone(),
+                                }
+                            }
+                        })
+                        .body(|ui| {
                             any_clicked |=
                                 topics_ui(&mut topic.children, cursor, topic_sel, ui, state);
                         });
-                    if re.header_response.clicked() {
-                        *topic_sel = cursor.clone();
-                        any_clicked = true;
-                    }
-                    if re.header_response.double_clicked() {
-                        *state = UiState::RenameTopic {
-                            idx: cursor.clone(),
-                        }
-                    }
                 }
             }
         }
