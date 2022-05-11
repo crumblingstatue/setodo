@@ -1,7 +1,7 @@
 use crate::data::{Attachment, Task, Topic};
 use eframe::{
     egui::{self, Button, CollapsingHeader, Key, RichText, ScrollArea, TextBuffer, TextEdit},
-    epi,
+    Frame,
 };
 use rmp_serde::Serializer;
 use serde::{Deserialize, Serialize};
@@ -86,12 +86,12 @@ impl TodoApp {
     }
 }
 
-impl epi::App for TodoApp {
+impl eframe::App for TodoApp {
     fn on_exit(&mut self, _ctx: &eframe::glow::Context) {
         TodoApp::save(self).unwrap();
     }
 
-    fn update(&mut self, ctx: &egui::Context, frame: &mut epi::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
         if ctx.input().key_pressed(Key::Escape) {
             frame.quit();
         }
