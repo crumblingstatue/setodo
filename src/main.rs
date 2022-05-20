@@ -1,5 +1,3 @@
-#![feature(decl_macro)]
-
 use app::TodoApp;
 use eframe::egui::{self, Visuals};
 
