@@ -90,7 +90,7 @@ impl TodoApp {
 }
 
 impl eframe::App for TodoApp {
-    fn on_exit(&mut self, _ctx: &eframe::glow::Context) {
+    fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>) {
         TodoApp::save(self).unwrap();
     }
 
