@@ -1,6 +1,7 @@
-use std::path::PathBuf;
-
-use serde::{Deserialize, Serialize};
+use {
+    serde::{Deserialize, Serialize},
+    std::path::PathBuf,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Topic {

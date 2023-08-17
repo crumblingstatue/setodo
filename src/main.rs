@@ -1,5 +1,7 @@
-use app::TodoApp;
-use eframe::egui::{self, Visuals};
+use {
+    app::TodoApp,
+    eframe::egui::{self, Visuals},
+};
 
 mod app;
 mod data;

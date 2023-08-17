@@ -1,14 +1,16 @@
-use crate::data::{Attachment, Task, Topic};
-use eframe::{
-    egui::{
-        self, collapsing_header::CollapsingState, Button, Key, RichText, ScrollArea, TextBuffer,
-        TextEdit,
+use {
+    crate::data::{Attachment, Task, Topic},
+    eframe::{
+        egui::{
+            self, collapsing_header::CollapsingState, Button, Key, RichText, ScrollArea,
+            TextBuffer, TextEdit,
+        },
+        Frame,
     },
-    Frame,
+    rmp_serde::Serializer,
+    serde::{Deserialize, Serialize},
+    std::{error::Error, fs::File, path::PathBuf},
 };
-use rmp_serde::Serializer;
-use serde::{Deserialize, Serialize};
-use std::{error::Error, fs::File, path::PathBuf};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TodoApp {
