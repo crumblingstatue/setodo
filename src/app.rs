@@ -226,12 +226,6 @@ impl eframe::App for TodoApp {
                                 });
                             }
                         });
-                        if !self.topic_sel.is_empty() {
-                            ui.separator();
-                            ui.heading("Topic Description");
-                            let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
-                            ui.text_edit_multiline(&mut topic.desc);
-                        }
                     });
                 });
         });
@@ -248,6 +242,8 @@ impl eframe::App for TodoApp {
                             if !self.topic_sel.is_empty() {
                                 let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
                                 ui.heading(&topic.name);
+                                ui.text_edit_multiline(&mut topic.desc);
+                                ui.heading("Tasks");
                                 for (i, task) in topic.tasks.iter_mut().enumerate() {
                                     ui.horizontal(|ui| {
                                         ui.checkbox(&mut task.done, "");
