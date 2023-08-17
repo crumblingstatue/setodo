@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = { git = "https://github.com/emilk/egui.git", features = ["persistence"] }
+eframe = { version = "0.22.0", features = ["persistence"] }
 rmp-serde = "1.1.0"
 dirs = "4.0.0"
 rfd = "0.8.2"

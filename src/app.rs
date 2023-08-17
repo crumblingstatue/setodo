@@ -95,8 +95,8 @@ impl eframe::App for TodoApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
-        if ctx.input().key_pressed(Key::Escape) {
-            frame.quit();
+        if ctx.input(|inp| inp.key_pressed(Key::Escape)) {
+            frame.close();
         }
         egui::CentralPanel::default().show(ctx, |ui| {
             let cp_avail_height = ui.available_height();
@@ -118,12 +118,14 @@ impl eframe::App for TodoApp {
                                 UiState::AddTopic(name) => {
                                     let clicked = ui.button("✔").clicked();
                                     if ui.button("🗙").clicked()
-                                        || ui.input().key_pressed(egui::Key::Escape)
+                                        || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
                                     {
                                         self.temp.state = UiState::Normal;
                                     } else {
                                         ui.text_edit_singleline(name).request_focus();
-                                        if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                        if clicked
+                                            || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
+                                        {
                                             self.topics.push(Topic {
                                                 name: name.take(),
                                                 desc: String::new(),
@@ -140,12 +142,14 @@ impl eframe::App for TodoApp {
                                 UiState::AddSubtopic { name, parent_idx } => {
                                     let clicked = ui.button("✔").clicked();
                                     if ui.button("🗙").clicked()
-                                        || ui.input().key_pressed(egui::Key::Escape)
+                                        || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
                                     {
                                         self.temp.state = UiState::Normal;
                                     } else {
                                         ui.text_edit_singleline(name).request_focus();
-                                        if clicked || ui.input().key_pressed(egui::Key::Enter) {
+                                        if clicked
+                                            || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
+                                        {
                                             let topic = get_topic_mut(&mut self.topics, parent_idx);
                                             topic.children.push(Topic {
                                                 name: name.take(),
@@ -284,13 +288,16 @@ impl eframe::App for TodoApp {
                                         UiState::AddTask(name) => {
                                             let clicked = ui.button("✔").clicked();
                                             if ui.button("🗙").clicked()
-                                                || ui.input().key_pressed(egui::Key::Escape)
+                                                || ui
+                                                    .input(|inp| inp.key_pressed(egui::Key::Escape))
                                             {
                                                 self.temp.state = UiState::Normal;
                                             } else {
                                                 ui.text_edit_singleline(name).request_focus();
                                                 if clicked
-                                                    || ui.input().key_pressed(egui::Key::Enter)
+                                                    || ui.input(|inp| {
+                                                        inp.key_pressed(egui::Key::Enter)
+                                                    })
                                                 {
                                                     get_topic_mut(
                                                         &mut self.topics,
@@ -322,7 +329,8 @@ impl eframe::App for TodoApp {
                                         }
                                         _ => {
                                             if ui.button("+").clicked()
-                                                || ui.input().key_pressed(egui::Key::Insert)
+                                                || ui
+                                                    .input(|inp| inp.key_pressed(egui::Key::Insert))
                                             {
                                                 self.temp.state = UiState::add_task();
                                             }

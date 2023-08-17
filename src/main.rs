@@ -23,5 +23,6 @@ fn main() {
             };
             Box::new(app)
         }),
-    );
+    )
+    .unwrap();
 }
