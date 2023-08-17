@@ -423,6 +423,7 @@ impl eframe::App for TodoApp {
                                         }
                                     }
                                 });
+                                ui.separator();
                                 if let Some(task_sel) =
                                     get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
                                 {
