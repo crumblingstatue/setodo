@@ -100,145 +100,145 @@ impl eframe::App for TodoApp {
         if ctx.input(|inp| inp.key_pressed(Key::Escape)) {
             frame.close();
         }
+        egui::SidePanel::left("tree_view").show(ctx, |ui| {
+            ScrollArea::vertical()
+                .id_source("topics_scroll")
+                .show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        ui.heading("Topics");
+                        let any_clicked = topics_ui(
+                            &mut self.topics,
+                            &mut Vec::new(),
+                            &mut self.topic_sel,
+                            ui,
+                            &mut self.temp.state,
+                        );
+                        ui.horizontal(|ui| match &mut self.temp.state {
+                            UiState::AddTopic(name) => {
+                                let clicked = ui.button("✔").clicked();
+                                if ui.button("🗙").clicked()
+                                    || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
+                                {
+                                    self.temp.state = UiState::Normal;
+                                } else {
+                                    ui.text_edit_singleline(name).request_focus();
+                                    if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
+                                    {
+                                        self.topics.push(Topic {
+                                            name: name.take(),
+                                            desc: String::new(),
+                                            tasks: Vec::new(),
+                                            task_sel: None,
+                                            children: Vec::new(),
+                                        });
+                                        self.temp.state = UiState::Normal;
+                                        // TODO: Do something more reasonable here
+                                        self.topic_sel.clear();
+                                    }
+                                }
+                            }
+                            UiState::AddSubtopic { name, parent_idx } => {
+                                let clicked = ui.button("✔").clicked();
+                                if ui.button("🗙").clicked()
+                                    || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
+                                {
+                                    self.temp.state = UiState::Normal;
+                                } else {
+                                    ui.text_edit_singleline(name).request_focus();
+                                    if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
+                                    {
+                                        let topic = get_topic_mut(&mut self.topics, parent_idx);
+                                        topic.children.push(Topic {
+                                            name: name.take(),
+                                            desc: String::new(),
+                                            tasks: Vec::new(),
+                                            task_sel: None,
+                                            children: Vec::new(),
+                                        });
+                                        self.temp.state = UiState::Normal;
+                                        // TODO: Do something more reasonable here
+                                        self.topic_sel.clear();
+                                    }
+                                }
+                            }
+                            UiState::MoveTopicInto { src_idx } => {
+                                ui.label("Click on topic to move into!");
+                                ui.label(any_clicked.to_string());
+                                if any_clicked {
+                                    move_topic(&mut self.topics, src_idx, &self.topic_sel);
+                                    self.temp.state = UiState::Normal;
+                                }
+                            }
+                            UiState::MoveTaskIntoTopic(task) => {
+                                if any_clicked {
+                                    move_task_into_topic(
+                                        &mut self.topics,
+                                        std::mem::take(task),
+                                        &self.topic_sel,
+                                    );
+                                    self.temp.state = UiState::Normal;
+                                }
+                            }
+                            _ => {
+                                ui.horizontal(|ui| {
+                                    if ui.button("+").clicked() {
+                                        self.temp.state = UiState::add_topic();
+                                    }
+                                    if ui
+                                        .add_enabled(
+                                            !self.topic_sel.is_empty(),
+                                            egui::Button::new("-"),
+                                        )
+                                        .clicked()
+                                        && !self.topic_sel.is_empty()
+                                    {
+                                        remove_topic(&mut self.topics, &self.topic_sel);
+                                        // TODO: Do something more reasonable
+                                        self.topic_sel.clear();
+                                    }
+                                    if let Some(topic_sel) = self.topic_sel.last_mut() {
+                                        if ui
+                                            .add_enabled(*topic_sel > 0, Button::new("⬆"))
+                                            .clicked()
+                                        {
+                                            self.topics.swap(*topic_sel, *topic_sel - 1);
+                                            *topic_sel -= 1;
+                                        }
+                                        if ui
+                                            .add_enabled(
+                                                *topic_sel < self.topics.len() - 1,
+                                                Button::new("⬇"),
+                                            )
+                                            .clicked()
+                                        {
+                                            self.topics.swap(*topic_sel, *topic_sel + 1);
+                                            *topic_sel += 1;
+                                        }
+                                        if ui.button("Add subtopic").clicked() {
+                                            self.temp.state =
+                                                UiState::add_subtopic(self.topic_sel.clone());
+                                        }
+                                        if ui.button("Move topic into").clicked() {
+                                            self.temp.state =
+                                                UiState::move_topic_into(self.topic_sel.clone());
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                        if !self.topic_sel.is_empty() {
+                            ui.separator();
+                            ui.heading("Topic Description");
+                            let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
+                            ui.text_edit_multiline(&mut topic.desc);
+                        }
+                    });
+                });
+        });
         egui::CentralPanel::default().show(ctx, |ui| {
             let cp_avail_height = ui.available_height();
             ui.horizontal(|ui| {
                 ui.set_min_height(cp_avail_height);
-                ScrollArea::vertical()
-                    .id_source("topics_scroll")
-                    .show(ui, |ui| {
-                        ui.vertical(|ui| {
-                            ui.heading("Topics");
-                            let any_clicked = topics_ui(
-                                &mut self.topics,
-                                &mut Vec::new(),
-                                &mut self.topic_sel,
-                                ui,
-                                &mut self.temp.state,
-                            );
-                            ui.horizontal(|ui| match &mut self.temp.state {
-                                UiState::AddTopic(name) => {
-                                    let clicked = ui.button("✔").clicked();
-                                    if ui.button("🗙").clicked()
-                                        || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
-                                    {
-                                        self.temp.state = UiState::Normal;
-                                    } else {
-                                        ui.text_edit_singleline(name).request_focus();
-                                        if clicked
-                                            || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
-                                        {
-                                            self.topics.push(Topic {
-                                                name: name.take(),
-                                                desc: String::new(),
-                                                tasks: Vec::new(),
-                                                task_sel: None,
-                                                children: Vec::new(),
-                                            });
-                                            self.temp.state = UiState::Normal;
-                                            // TODO: Do something more reasonable here
-                                            self.topic_sel.clear();
-                                        }
-                                    }
-                                }
-                                UiState::AddSubtopic { name, parent_idx } => {
-                                    let clicked = ui.button("✔").clicked();
-                                    if ui.button("🗙").clicked()
-                                        || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
-                                    {
-                                        self.temp.state = UiState::Normal;
-                                    } else {
-                                        ui.text_edit_singleline(name).request_focus();
-                                        if clicked
-                                            || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
-                                        {
-                                            let topic = get_topic_mut(&mut self.topics, parent_idx);
-                                            topic.children.push(Topic {
-                                                name: name.take(),
-                                                desc: String::new(),
-                                                tasks: Vec::new(),
-                                                task_sel: None,
-                                                children: Vec::new(),
-                                            });
-                                            self.temp.state = UiState::Normal;
-                                            // TODO: Do something more reasonable here
-                                            self.topic_sel.clear();
-                                        }
-                                    }
-                                }
-                                UiState::MoveTopicInto { src_idx } => {
-                                    ui.label("Click on topic to move into!");
-                                    ui.label(any_clicked.to_string());
-                                    if any_clicked {
-                                        move_topic(&mut self.topics, src_idx, &self.topic_sel);
-                                        self.temp.state = UiState::Normal;
-                                    }
-                                }
-                                UiState::MoveTaskIntoTopic(task) => {
-                                    if any_clicked {
-                                        move_task_into_topic(
-                                            &mut self.topics,
-                                            std::mem::take(task),
-                                            &self.topic_sel,
-                                        );
-                                        self.temp.state = UiState::Normal;
-                                    }
-                                }
-                                _ => {
-                                    ui.horizontal(|ui| {
-                                        if ui.button("+").clicked() {
-                                            self.temp.state = UiState::add_topic();
-                                        }
-                                        if ui
-                                            .add_enabled(
-                                                !self.topic_sel.is_empty(),
-                                                egui::Button::new("-"),
-                                            )
-                                            .clicked()
-                                            && !self.topic_sel.is_empty()
-                                        {
-                                            remove_topic(&mut self.topics, &self.topic_sel);
-                                            // TODO: Do something more reasonable
-                                            self.topic_sel.clear();
-                                        }
-                                        if let Some(topic_sel) = self.topic_sel.last_mut() {
-                                            if ui
-                                                .add_enabled(*topic_sel > 0, Button::new("⬆"))
-                                                .clicked()
-                                            {
-                                                self.topics.swap(*topic_sel, *topic_sel - 1);
-                                                *topic_sel -= 1;
-                                            }
-                                            if ui
-                                                .add_enabled(
-                                                    *topic_sel < self.topics.len() - 1,
-                                                    Button::new("⬇"),
-                                                )
-                                                .clicked()
-                                            {
-                                                self.topics.swap(*topic_sel, *topic_sel + 1);
-                                                *topic_sel += 1;
-                                            }
-                                            if ui.button("Add subtopic").clicked() {
-                                                self.temp.state =
-                                                    UiState::add_subtopic(self.topic_sel.clone());
-                                            }
-                                            if ui.button("Move topic into").clicked() {
-                                                self.temp.state = UiState::move_topic_into(
-                                                    self.topic_sel.clone(),
-                                                );
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                            if !self.topic_sel.is_empty() {
-                                ui.heading("Topic Description");
-                                let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
-                                ui.text_edit_multiline(&mut topic.desc);
-                            }
-                        });
-                    });
                 let cp_avail_width = ui.available_width();
                 ScrollArea::vertical()
                     .auto_shrink([false; 2])
