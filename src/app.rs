@@ -245,9 +245,9 @@ impl eframe::App for TodoApp {
                     .id_source("tasks_scroll")
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
-                            ui.heading("Tasks");
                             if !self.topic_sel.is_empty() {
                                 let topic = get_topic_mut(&mut self.topics, &self.topic_sel);
+                                ui.heading(&topic.name);
                                 for (i, task) in topic.tasks.iter_mut().enumerate() {
                                     ui.horizontal(|ui| {
                                         ui.checkbox(&mut task.done, "");
@@ -426,13 +426,12 @@ impl eframe::App for TodoApp {
                                 if let Some(task_sel) =
                                     get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
                                 {
-                                    ui.heading("Task Description");
-                                    let te = TextEdit::multiline(
+                                    let task =
                                         &mut get_topic_mut(&mut self.topics, &self.topic_sel).tasks
-                                            [task_sel]
-                                            .desc,
-                                    )
-                                    .desired_width(cp_avail_width);
+                                            [task_sel];
+                                    ui.heading(&task.title);
+                                    let te = TextEdit::multiline(&mut task.desc)
+                                        .desired_width(cp_avail_width);
                                     ui.add(te);
                                     for attachment in
                                         &get_topic_mut(&mut self.topics, &self.topic_sel).tasks
