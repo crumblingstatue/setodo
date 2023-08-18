@@ -7,6 +7,7 @@ use {
         },
         Frame,
     },
+    egui_phosphor::regular as ph,
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
     std::{error::Error, fs::File, path::PathBuf},
@@ -181,13 +182,13 @@ impl eframe::App for TodoApp {
                             }
                             _ => {
                                 ui.horizontal(|ui| {
-                                    if ui.button("+").clicked() {
+                                    if ui.button(ph::FILE_PLUS).clicked() {
                                         self.temp.state = UiState::add_topic();
                                     }
                                     if ui
                                         .add_enabled(
                                             !self.topic_sel.is_empty(),
-                                            egui::Button::new("-"),
+                                            egui::Button::new(ph::TRASH),
                                         )
                                         .clicked()
                                         && !self.topic_sel.is_empty()
@@ -198,7 +199,10 @@ impl eframe::App for TodoApp {
                                     }
                                     if let Some(topic_sel) = self.topic_sel.last_mut() {
                                         if ui
-                                            .add_enabled(*topic_sel > 0, Button::new("⬆"))
+                                            .add_enabled(
+                                                *topic_sel > 0,
+                                                Button::new(ph::ARROW_FAT_UP),
+                                            )
                                             .clicked()
                                         {
                                             self.topics.swap(*topic_sel, *topic_sel - 1);
@@ -207,7 +211,7 @@ impl eframe::App for TodoApp {
                                         if ui
                                             .add_enabled(
                                                 *topic_sel < self.topics.len() - 1,
-                                                Button::new("⬇"),
+                                                Button::new(ph::ARROW_FAT_DOWN),
                                             )
                                             .clicked()
                                         {
@@ -326,13 +330,13 @@ impl eframe::App for TodoApp {
                                             }
                                         }
                                         _ => {
-                                            if ui.button("+").clicked()
+                                            if ui.button(ph::FILE_PLUS).clicked()
                                                 || ui
                                                     .input(|inp| inp.key_pressed(egui::Key::Insert))
                                             {
                                                 self.temp.state = UiState::add_task();
                                             }
-                                            if ui.button("-").clicked() {
+                                            if ui.button(ph::TRASH).clicked() {
                                                 if let Some(task_sel) =
                                                     get_topic_mut(&mut self.topics, &self.topic_sel)
                                                         .task_sel
@@ -380,7 +384,12 @@ impl eframe::App for TodoApp {
                                     if let Some(task_sel) =
                                         get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
                                     {
-                                        if ui.add_enabled(task_sel > 0, Button::new("⬆")).clicked()
+                                        if ui
+                                            .add_enabled(
+                                                task_sel > 0,
+                                                Button::new(ph::ARROW_FAT_UP),
+                                            )
+                                            .clicked()
                                         {
                                             get_topic_mut(&mut self.topics, &self.topic_sel)
                                                 .tasks
@@ -398,7 +407,7 @@ impl eframe::App for TodoApp {
                                                     .tasks
                                                     .len()
                                                         - 1,
-                                                Button::new("⬇"),
+                                                Button::new(ph::ARROW_FAT_DOWN),
                                             )
                                             .clicked()
                                         {
