@@ -417,6 +417,19 @@ impl eframe::App for TodoApp {
                                             get_topic_mut(&mut self.topics, &self.topic_sel)
                                                 .task_sel = Some(task_sel + 1);
                                         }
+                                        if ui
+                                            .button(ph::SORT_DESCENDING)
+                                            .on_hover_text("Auto sort")
+                                            .clicked()
+                                        {
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .tasks
+                                                .sort_by(|a, b| {
+                                                    a.done
+                                                        .cmp(&b.done)
+                                                        .then_with(|| a.title.cmp(&b.title))
+                                                });
+                                        }
                                         if ui.button("Move task into topic").clicked() {
                                             let topic =
                                                 get_topic_mut(&mut self.topics, &self.topic_sel);
