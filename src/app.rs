@@ -285,161 +285,149 @@ impl eframe::App for TodoApp {
                                         }
                                     });
                                 }
-                                ui.horizontal(|ui| {
-                                    match &mut self.temp.state {
-                                        UiState::AddTask(name) => {
-                                            let clicked = ui.button(ph::CHECK_FAT).clicked();
-                                            if ui.button(ph::X_CIRCLE).clicked()
-                                                || ui
-                                                    .input(|inp| inp.key_pressed(egui::Key::Escape))
+                                ui.horizontal(|ui| match &mut self.temp.state {
+                                    UiState::AddTask(name) => {
+                                        let clicked = ui.button(ph::CHECK_FAT).clicked();
+                                        if ui.button(ph::X_CIRCLE).clicked()
+                                            || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
+                                        {
+                                            self.temp.state = UiState::Normal;
+                                        } else {
+                                            ui.text_edit_singleline(name).request_focus();
+                                            if clicked
+                                                || ui.input(|inp| inp.key_pressed(egui::Key::Enter))
                                             {
+                                                let topic = get_topic_mut(
+                                                    &mut self.topics,
+                                                    &self.topic_sel,
+                                                );
+                                                topic.tasks.insert(
+                                                    topic.task_sel.map(|idx| idx + 1).unwrap_or(0),
+                                                    Task {
+                                                        title: name.take(),
+                                                        desc: String::new(),
+                                                        done: false,
+                                                        attachments: Vec::new(),
+                                                    },
+                                                );
                                                 self.temp.state = UiState::Normal;
-                                            } else {
-                                                ui.text_edit_singleline(name).request_focus();
-                                                if clicked
-                                                    || ui.input(|inp| {
-                                                        inp.key_pressed(egui::Key::Enter)
-                                                    })
-                                                {
-                                                    let topic = get_topic_mut(
-                                                        &mut self.topics,
-                                                        &self.topic_sel,
-                                                    );
-                                                    topic.tasks.insert(
-                                                        topic
-                                                            .task_sel
-                                                            .map(|idx| idx + 1)
-                                                            .unwrap_or(0),
-                                                        Task {
-                                                            title: name.take(),
-                                                            desc: String::new(),
-                                                            done: false,
-                                                            attachments: Vec::new(),
-                                                        },
-                                                    );
-                                                    self.temp.state = UiState::Normal;
-                                                    match &mut topic.task_sel {
-                                                        Some(sel) => {
-                                                            if *sel + 1 < topic.tasks.len() {
-                                                                *sel += 1;
-                                                            }
-                                                        }
-                                                        None => {
-                                                            topic.task_sel = Some(0);
+                                                match &mut topic.task_sel {
+                                                    Some(sel) => {
+                                                        if *sel + 1 < topic.tasks.len() {
+                                                            *sel += 1;
                                                         }
                                                     }
-                                                }
-                                            }
-                                        }
-                                        _ => {
-                                            if ui.button(ph::FILE_PLUS).clicked()
-                                                || ui
-                                                    .input(|inp| inp.key_pressed(egui::Key::Insert))
-                                            {
-                                                self.temp.state = UiState::add_task();
-                                            }
-                                            if ui.button(ph::TRASH).clicked() {
-                                                if let Some(task_sel) =
-                                                    get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                        .task_sel
-                                                {
-                                                    get_topic_mut(
-                                                        &mut self.topics,
-                                                        &self.topic_sel,
-                                                    )
-                                                    .tasks
-                                                    .remove(task_sel);
-                                                    if get_topic_mut(
-                                                        &mut self.topics,
-                                                        &self.topic_sel,
-                                                    )
-                                                    .tasks
-                                                    .is_empty()
-                                                    {
-                                                        get_topic_mut(
-                                                            &mut self.topics,
-                                                            &self.topic_sel,
-                                                        )
-                                                        .task_sel = None;
-                                                    } else {
-                                                        get_topic_mut(
-                                                            &mut self.topics,
-                                                            &self.topic_sel,
-                                                        )
-                                                        .task_sel = Some(
-                                                            task_sel.clamp(
-                                                                0,
-                                                                get_topic_mut(
-                                                                    &mut self.topics,
-                                                                    &self.topic_sel,
-                                                                )
-                                                                .tasks
-                                                                .len()
-                                                                    - 1,
-                                                            ),
-                                                        );
+                                                    None => {
+                                                        topic.task_sel = Some(0);
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                    if let Some(task_sel) =
-                                        get_topic_mut(&mut self.topics, &self.topic_sel).task_sel
-                                    {
-                                        if ui
-                                            .add_enabled(
-                                                task_sel > 0,
-                                                Button::new(ph::ARROW_FAT_UP),
-                                            )
-                                            .clicked()
+                                    _ => {
+                                        if ui.button(ph::FILE_PLUS).clicked()
+                                            || ui.input(|inp| inp.key_pressed(egui::Key::Insert))
                                         {
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .tasks
-                                                .swap(task_sel, task_sel - 1);
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .task_sel = Some(task_sel - 1);
+                                            self.temp.state = UiState::add_task();
                                         }
-                                        if ui
-                                            .add_enabled(
-                                                task_sel
-                                                    < get_topic_mut(
+                                        if ui.button(ph::TRASH).clicked() {
+                                            if let Some(task_sel) =
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .task_sel
+                                            {
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .tasks
+                                                    .remove(task_sel);
+                                                if get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .tasks
+                                                    .is_empty()
+                                                {
+                                                    get_topic_mut(
                                                         &mut self.topics,
                                                         &self.topic_sel,
                                                     )
+                                                    .task_sel = None;
+                                                } else {
+                                                    get_topic_mut(
+                                                        &mut self.topics,
+                                                        &self.topic_sel,
+                                                    )
+                                                    .task_sel = Some(
+                                                        task_sel.clamp(
+                                                            0,
+                                                            get_topic_mut(
+                                                                &mut self.topics,
+                                                                &self.topic_sel,
+                                                            )
+                                                            .tasks
+                                                            .len()
+                                                                - 1,
+                                                        ),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        if let Some(task_sel) =
+                                            get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                .task_sel
+                                        {
+                                            if ui
+                                                .add_enabled(
+                                                    task_sel > 0,
+                                                    Button::new(ph::ARROW_FAT_UP),
+                                                )
+                                                .clicked()
+                                            {
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
                                                     .tasks
-                                                    .len()
-                                                        - 1,
-                                                Button::new(ph::ARROW_FAT_DOWN),
-                                            )
-                                            .clicked()
-                                        {
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .tasks
-                                                .swap(task_sel, task_sel + 1);
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .task_sel = Some(task_sel + 1);
-                                        }
-                                        if ui
-                                            .button(ph::SORT_DESCENDING)
-                                            .on_hover_text("Auto sort")
-                                            .clicked()
-                                        {
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .tasks
-                                                .sort_by(|a, b| {
-                                                    a.done
-                                                        .cmp(&b.done)
-                                                        .then_with(|| a.title.cmp(&b.title))
-                                                });
-                                        }
-                                        if ui.button("Move task into topic").clicked() {
-                                            let topic =
-                                                get_topic_mut(&mut self.topics, &self.topic_sel);
-                                            self.temp.state = UiState::MoveTaskIntoTopic(
-                                                topic.tasks.remove(task_sel),
-                                            );
-                                            get_topic_mut(&mut self.topics, &self.topic_sel)
-                                                .task_sel = None;
+                                                    .swap(task_sel, task_sel - 1);
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .task_sel = Some(task_sel - 1);
+                                            }
+                                            if ui
+                                                .add_enabled(
+                                                    task_sel
+                                                        < get_topic_mut(
+                                                            &mut self.topics,
+                                                            &self.topic_sel,
+                                                        )
+                                                        .tasks
+                                                        .len()
+                                                            - 1,
+                                                    Button::new(ph::ARROW_FAT_DOWN),
+                                                )
+                                                .clicked()
+                                            {
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .tasks
+                                                    .swap(task_sel, task_sel + 1);
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .task_sel = Some(task_sel + 1);
+                                            }
+                                            if ui
+                                                .button(ph::SORT_DESCENDING)
+                                                .on_hover_text("Auto sort")
+                                                .clicked()
+                                            {
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .tasks
+                                                    .sort_by(|a, b| {
+                                                        a.done
+                                                            .cmp(&b.done)
+                                                            .then_with(|| a.title.cmp(&b.title))
+                                                    });
+                                            }
+                                            if ui.button("Move task into topic").clicked() {
+                                                let topic = get_topic_mut(
+                                                    &mut self.topics,
+                                                    &self.topic_sel,
+                                                );
+                                                self.temp.state = UiState::MoveTaskIntoTopic(
+                                                    topic.tasks.remove(task_sel),
+                                                );
+                                                get_topic_mut(&mut self.topics, &self.topic_sel)
+                                                    .task_sel = None;
+                                            }
                                         }
                                     }
                                 });
