@@ -301,31 +301,33 @@ impl eframe::App for TodoApp {
                                                         inp.key_pressed(egui::Key::Enter)
                                                     })
                                                 {
-                                                    get_topic_mut(
+                                                    let topic = get_topic_mut(
                                                         &mut self.topics,
                                                         &self.topic_sel,
-                                                    )
-                                                    .tasks
-                                                    .push(Task {
-                                                        title: name.take(),
-                                                        desc: String::new(),
-                                                        done: false,
-                                                        attachments: Vec::new(),
-                                                    });
-                                                    self.temp.state = UiState::Normal;
-                                                    get_topic_mut(
-                                                        &mut self.topics,
-                                                        &self.topic_sel,
-                                                    )
-                                                    .task_sel = Some(
-                                                        get_topic_mut(
-                                                            &mut self.topics,
-                                                            &self.topic_sel,
-                                                        )
-                                                        .tasks
-                                                        .len()
-                                                            - 1,
                                                     );
+                                                    topic.tasks.insert(
+                                                        topic
+                                                            .task_sel
+                                                            .map(|idx| idx + 1)
+                                                            .unwrap_or(0),
+                                                        Task {
+                                                            title: name.take(),
+                                                            desc: String::new(),
+                                                            done: false,
+                                                            attachments: Vec::new(),
+                                                        },
+                                                    );
+                                                    self.temp.state = UiState::Normal;
+                                                    match &mut topic.task_sel {
+                                                        Some(sel) => {
+                                                            if *sel + 1 < topic.tasks.len() {
+                                                                *sel += 1;
+                                                            }
+                                                        }
+                                                        None => {
+                                                            topic.task_sel = Some(0);
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
