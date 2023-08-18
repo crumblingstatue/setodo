@@ -116,8 +116,8 @@ impl eframe::App for TodoApp {
                         );
                         ui.horizontal(|ui| match &mut self.temp.state {
                             UiState::AddTopic(name) => {
-                                let clicked = ui.button("✔").clicked();
-                                if ui.button("🗙").clicked()
+                                let clicked = ui.button(ph::CHECK_FAT).clicked();
+                                if ui.button(ph::X_CIRCLE).clicked()
                                     || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
                                 {
                                     self.temp.state = UiState::Normal;
@@ -139,8 +139,8 @@ impl eframe::App for TodoApp {
                                 }
                             }
                             UiState::AddSubtopic { name, parent_idx } => {
-                                let clicked = ui.button("✔").clicked();
-                                if ui.button("🗙").clicked()
+                                let clicked = ui.button(ph::CHECK_FAT).clicked();
+                                if ui.button(ph::X_CIRCLE).clicked()
                                     || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
                                 {
                                     self.temp.state = UiState::Normal;
@@ -288,8 +288,8 @@ impl eframe::App for TodoApp {
                                 ui.horizontal(|ui| {
                                     match &mut self.temp.state {
                                         UiState::AddTask(name) => {
-                                            let clicked = ui.button("✔").clicked();
-                                            if ui.button("🗙").clicked()
+                                            let clicked = ui.button(ph::CHECK_FAT).clicked();
+                                            if ui.button(ph::X_CIRCLE).clicked()
                                                 || ui
                                                     .input(|inp| inp.key_pressed(egui::Key::Escape))
                                             {
