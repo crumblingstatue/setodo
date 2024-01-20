@@ -5,6 +5,7 @@ use {
 
 mod app;
 mod data;
+mod ui;
 
 fn main() {
     let native_options = eframe::NativeOptions {
