@@ -3,7 +3,7 @@ use {
     eframe::{
         egui::{
             self, collapsing_header::CollapsingState, Button, Key, RichText, ScrollArea,
-            TextBuffer, TextEdit,
+            TextBuffer, TextEdit, ViewportCommand,
         },
         Frame,
     },
@@ -97,9 +97,9 @@ impl eframe::App for TodoApp {
         TodoApp::save(self).unwrap();
     }
 
-    fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
         if ctx.input(|inp| inp.key_pressed(Key::Escape)) {
-            frame.close();
+            ctx.send_viewport_cmd(ViewportCommand::Close);
         }
         egui::SidePanel::left("tree_view").show(ctx, |ui| {
             ScrollArea::vertical()

@@ -1,6 +1,6 @@
 use {
     app::TodoApp,
-    eframe::egui::{self, Visuals},
+    eframe::egui::{self, ViewportBuilder, Visuals},
 };
 
 mod app;
@@ -8,7 +8,7 @@ mod data;
 
 fn main() {
     let native_options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(620., 480.)),
+        viewport: ViewportBuilder::default().with_inner_size(egui::vec2(620., 480.)),
         ..Default::default()
     };
     eframe::run_native(
