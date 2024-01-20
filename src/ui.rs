@@ -365,88 +365,75 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 }
                             }
                         });
-                        ui.separator();
                         if let Some(task_sel) =
                             get_topic_mut(&mut app.topics, &app.topic_sel).task_sel
                         {
-                            let task =
-                                &mut get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel];
-                            ui.heading(&task.title);
-                            let te = egui::TextEdit::multiline(&mut task.desc)
-                                .desired_width(cp_avail_width);
-                            ui.add(te);
-                            for attachment in &get_topic_mut(&mut app.topics, &app.topic_sel).tasks
-                                [task_sel]
-                                .attachments
-                            {
-                                ui.horizontal(|ui| {
-                                    ui.label(attachment.filename.display().to_string());
-                                    if ui.button("open").clicked() {
-                                        let tmp_dir = std::env::temp_dir();
-                                        let save_dir = tmp_dir.join("setodo-attachments");
-                                        let path = save_dir.join(&attachment.filename);
-                                        let dir_exists;
-                                        if save_dir.exists() {
-                                            dir_exists = true;
-                                        } else {
-                                            match std::fs::create_dir(save_dir) {
-                                                Ok(_) => {
-                                                    dir_exists = true;
-                                                }
-                                                Err(e) => {
-                                                    error_msgbox(&format!(
-                                                        "Failed to create tmp dir: {}",
-                                                        e
-                                                    ));
-                                                    dir_exists = false;
-                                                }
-                                            }
-                                        }
-                                        if dir_exists {
-                                            match std::fs::write(&path, &attachment.data) {
-                                                Ok(_) => {
-                                                    if let Err(e) = open::that(path) {
-                                                        error_msgbox(&format!(
-                                                            "Failed to open file: {}",
-                                                            e
-                                                        ))
-                                                    }
-                                                }
-                                                Err(e) => error_msgbox(&format!(
-                                                    "Failed to save file: {}",
-                                                    e
-                                                )),
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            if ui.button("Attach files").clicked() {
-                                if let Some(paths) = rfd::FileDialog::new().pick_files() {
-                                    for path in paths {
-                                        if let Some(filename) = path.file_name() {
-                                            let data = std::fs::read(&path).unwrap();
-                                            get_topic_mut(&mut app.topics, &app.topic_sel).tasks
-                                                [task_sel]
-                                                .attachments
-                                                .push(Attachment {
-                                                    filename: filename.into(),
-                                                    data,
-                                                })
-                                        } else {
-                                            error_msgbox(&format!(
-                                                "Could not determine filename for file {:?}",
-                                                path
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
+                            ui.separator();
+                            task_ui(app, task_sel, ui, cp_avail_width);
                         }
                     }
                 });
             });
     });
+}
+
+/// UI for details about an individual task
+fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width: f32) {
+    let task = &mut get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel];
+    ui.heading(&task.title);
+    let te = egui::TextEdit::multiline(&mut task.desc).desired_width(cp_avail_width);
+    ui.add(te);
+    for attachment in &get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel].attachments {
+        ui.horizontal(|ui| {
+            ui.label(attachment.filename.display().to_string());
+            if ui.button("open").clicked() {
+                let tmp_dir = std::env::temp_dir();
+                let save_dir = tmp_dir.join("setodo-attachments");
+                let path = save_dir.join(&attachment.filename);
+                let dir_exists;
+                if save_dir.exists() {
+                    dir_exists = true;
+                } else {
+                    match std::fs::create_dir(save_dir) {
+                        Ok(_) => {
+                            dir_exists = true;
+                        }
+                        Err(e) => {
+                            error_msgbox(&format!("Failed to create tmp dir: {}", e));
+                            dir_exists = false;
+                        }
+                    }
+                }
+                if dir_exists {
+                    match std::fs::write(&path, &attachment.data) {
+                        Ok(_) => {
+                            if let Err(e) = open::that(path) {
+                                error_msgbox(&format!("Failed to open file: {}", e))
+                            }
+                        }
+                        Err(e) => error_msgbox(&format!("Failed to save file: {}", e)),
+                    }
+                }
+            }
+        });
+    }
+    if ui.button("Attach files").clicked() {
+        if let Some(paths) = rfd::FileDialog::new().pick_files() {
+            for path in paths {
+                if let Some(filename) = path.file_name() {
+                    let data = std::fs::read(&path).unwrap();
+                    get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel]
+                        .attachments
+                        .push(Attachment {
+                            filename: filename.into(),
+                            data,
+                        })
+                } else {
+                    error_msgbox(&format!("Could not determine filename for file {:?}", path));
+                }
+            }
+        }
+    }
 }
 
 pub fn error_msgbox(msg: &str) {
