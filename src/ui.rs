@@ -198,62 +198,63 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     ui.horizontal(|ui| {
         ui.set_min_height(cp_avail_height);
         let cp_avail_width = ui.available_width();
-        ScrollArea::vertical()
-            .auto_shrink([false; 2])
-            .id_source("tasks_scroll")
-            .show(ui, |ui| {
-                ui.vertical(|ui| {
-                    if !app.topic_sel.is_empty() {
-                        let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
-                        ui.heading(&topic.name);
-                        ui.text_edit_multiline(&mut topic.desc);
-                        tasks_list_ui(ui, app);
-                        if let Some(task_sel) =
-                            get_topic_mut(&mut app.topics, &app.topic_sel).task_sel
-                        {
-                            ui.separator();
-                            task_ui(app, task_sel, ui, cp_avail_width);
-                        }
-                    }
-                });
-            });
+        ui.vertical(|ui| {
+            if !app.topic_sel.is_empty() {
+                let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
+                ui.heading(&topic.name);
+                ui.text_edit_multiline(&mut topic.desc);
+                ui.separator();
+                tasks_list_ui(ui, app);
+                if let Some(task_sel) = get_topic_mut(&mut app.topics, &app.topic_sel).task_sel {
+                    ui.separator();
+                    task_ui(app, task_sel, ui, cp_avail_width);
+                }
+            }
+        });
     });
 }
 
 fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
-    let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
     ui.heading("Tasks");
-    for (i, task) in topic.tasks.iter_mut().enumerate() {
-        ui.horizontal(|ui| {
-            ui.checkbox(&mut task.done, "");
-            let mut text = egui::RichText::new(&task.title);
-            if task.done {
-                text = text.strikethrough();
-            }
-            match &app.temp.state {
-                UiState::RenameTask {
-                    task_idx,
-                    topic_idx,
-                } if topic_idx == &app.topic_sel && i == *task_idx => {
-                    if ui.text_edit_singleline(&mut task.title).lost_focus() {
-                        app.temp.state = UiState::Normal;
+    ScrollArea::vertical()
+        .auto_shrink([false; 2])
+        .id_source("tasks_scroll")
+        .max_height(200.0)
+        .show(ui, |ui| {
+            let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
+            for (i, task) in topic.tasks.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut task.done, "");
+                    let mut text = egui::RichText::new(&task.title);
+                    if task.done {
+                        text = text.strikethrough();
                     }
-                }
-                _ => {
-                    let re = ui.selectable_label(topic.task_sel == Some(i), text);
-                    if re.clicked() {
-                        topic.task_sel = Some(i);
+                    match &app.temp.state {
+                        UiState::RenameTask {
+                            task_idx,
+                            topic_idx,
+                        } if topic_idx == &app.topic_sel && i == *task_idx => {
+                            if ui.text_edit_singleline(&mut task.title).lost_focus() {
+                                app.temp.state = UiState::Normal;
+                            }
+                        }
+                        _ => {
+                            let re = ui.selectable_label(topic.task_sel == Some(i), text);
+                            if re.clicked() {
+                                topic.task_sel = Some(i);
+                            }
+                            if re.double_clicked() {
+                                app.temp.state = UiState::RenameTask {
+                                    topic_idx: app.topic_sel.clone(),
+                                    task_idx: topic.task_sel.unwrap(),
+                                };
+                            }
+                        }
                     }
-                    if re.double_clicked() {
-                        app.temp.state = UiState::RenameTask {
-                            topic_idx: app.topic_sel.clone(),
-                            task_idx: topic.task_sel.unwrap(),
-                        };
-                    }
-                }
+                });
             }
         });
-    }
+    ui.separator();
     ui.horizontal(|ui| match &mut app.temp.state {
         UiState::AddTask(name) => {
             let clicked = ui.button(ph::CHECK_FAT).clicked();
