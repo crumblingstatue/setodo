@@ -563,7 +563,6 @@ fn insert_topic(mut topics: &mut Vec<Topic>, indices: &[usize], topic: Topic) {
             topics = &mut topics[idx].children;
         }
     }
-    unreachable!()
 }
 
 fn topics_ui(
