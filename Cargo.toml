@@ -12,7 +12,8 @@ dirs = "5.0.1"
 rfd = "0.13.0"
 open = "5.0.1"
 zstd = "0.13.0"
-egui-phosphor = {git = "https://github.com/crumblingstatue/egui-phosphor.git"}
+egui-phosphor = { git = "https://github.com/crumblingstatue/egui-phosphor.git" }
+egui-fontcfg = { git = "https://github.com/crumblingstatue/egui-fontcfg.git" }
 
 [dependencies.serde]
 version = "1.0.195"

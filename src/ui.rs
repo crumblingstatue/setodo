@@ -1,9 +1,13 @@
 use {
     crate::{
-        app::{get_topic_mut, move_task_into_topic, move_topic, remove_topic, TodoApp, UiState},
+        app::{
+            get_topic_mut, move_task_into_topic, move_topic, remove_topic, StoredFontData, TodoApp,
+            UiState,
+        },
         data::{Attachment, Task, Topic},
     },
     eframe::egui::{self, collapsing_header::CollapsingState, ScrollArea, TextBuffer},
+    egui_fontcfg::FontDefsUiMsg,
     egui_phosphor::regular as ph,
 };
 
@@ -133,6 +137,15 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         });
                     }
                 });
+                if ui
+                    .add_enabled(
+                        !matches!(app.temp.state, UiState::FontCfg),
+                        egui::Link::new("Font config"),
+                    )
+                    .clicked()
+                {
+                    app.temp.state = UiState::FontCfg;
+                }
             });
         });
 }
@@ -194,6 +207,23 @@ fn topics_ui(
 }
 
 pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
+    if matches!(app.temp.state, UiState::FontCfg) {
+        if ui.link("Back").clicked() {
+            app.temp.state = UiState::Normal;
+        }
+        ui.separator();
+        if let FontDefsUiMsg::SaveRequest = app.temp.font_defs_ui.show(
+            ui,
+            &mut app.temp.font_defs_edit_copy,
+            Some(&mut app.temp.custom_edit_copy),
+        ) {
+            app.stored_font_data = Some(StoredFontData {
+                families: app.temp.font_defs_edit_copy.families.clone(),
+                custom: app.temp.custom_edit_copy.clone(),
+            });
+        }
+        return;
+    }
     let cp_avail_height = ui.available_height();
     ui.horizontal(|ui| {
         ui.set_min_height(cp_avail_height);

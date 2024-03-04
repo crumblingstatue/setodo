@@ -956,9 +956,9 @@ checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
 name = "ecolor"
-version = "0.26.0-alpha.2"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fe3dbfdd558f843ae73a7a121aabfe2b738328b6cbb5cd156107f85092d249a"
+checksum = "03cfe80b1890e1a8cdbffc6044d6872e814aaf6011835a2a5e2db0e5c5c4ef4e"
 dependencies = [
  "bytemuck",
  "serde",
@@ -1002,9 +1002,9 @@ dependencies = [
 
 [[package]]
 name = "egui"
-version = "0.26.0-alpha.2"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "646b98fbc5dfd80dec07d41baf00e4a3012e458e22969109e63b1db05b041927"
+checksum = "180f595432a5b615fc6b74afef3955249b86cfea72607b40740a4cd60d5297d0"
 dependencies = [
  "accesskit",
  "ahash",
@@ -1013,6 +1013,14 @@ dependencies = [
  "nohash-hasher",
  "ron",
  "serde",
+]
+
+[[package]]
+name = "egui-fontcfg"
+version = "0.1.0"
+source = "git+https://github.com/crumblingstatue/egui-fontcfg.git#fb133b5ecd3c5575f02c5dce13e2b2268ed62610"
+dependencies = [
+ "egui",
 ]
 
 [[package]]
@@ -1077,9 +1085,9 @@ dependencies = [
 
 [[package]]
 name = "emath"
-version = "0.26.0-alpha.2"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7045913a3b06a9a8e298e281f7d9247025e5cc13b21787c6a2561fd555dd6735"
+checksum = "6916301ecf80448f786cdf3eb51d9dbdd831538732229d49119e2d4312eaaf09"
 dependencies = [
  "bytemuck",
  "serde",
@@ -1119,9 +1127,9 @@ dependencies = [
 
 [[package]]
 name = "epaint"
-version = "0.26.0-alpha.2"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cecbf377648fc603a8a7abed354b5a09a9770430a0d3aa7a61e1189baed91f4b"
+checksum = "77b9fdf617dd7f58b0c8e6e9e4a1281f730cde0831d40547da446b2bb76a47af"
 dependencies = [
  "ab_glyph",
  "ahash",
@@ -2648,6 +2656,7 @@ version = "0.1.0"
 dependencies = [
  "dirs",
  "eframe",
+ "egui-fontcfg",
  "egui-phosphor",
  "open",
  "rfd",

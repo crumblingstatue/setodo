@@ -4,31 +4,48 @@ use {
         ui::{central_panel_ui, tree_view_ui},
     },
     eframe::{
-        egui::{self, Key, ViewportCommand},
+        egui::{self, FontDefinitions, FontFamily, Key, ViewportCommand},
         Frame,
     },
+    egui_fontcfg::{CustomFonts, FontDefsUi},
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
-    std::{error::Error, fs::File, path::PathBuf},
+    std::{collections::BTreeMap, error::Error, fs::File, path::PathBuf},
 };
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TodoApp {
     pub topic_sel: Vec<usize>,
     pub topics: Vec<Topic>,
+    #[serde(default)]
+    pub stored_font_data: Option<StoredFontData>,
     #[serde(skip)]
     pub temp: TodoAppTemp,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StoredFontData {
+    pub families: BTreeMap<FontFamily, Vec<String>>,
+    pub custom: CustomFonts,
 }
 
 /// Transient data, not saved during serialization
 pub struct TodoAppTemp {
     pub state: UiState,
+    pub font_defs_ui: FontDefsUi,
+    /// Copy of FontDefs for editing through font config UI
+    pub font_defs_edit_copy: FontDefinitions,
+    /// Copy of CustomFonts for editing through font config UI
+    pub custom_edit_copy: CustomFonts,
 }
 
 impl Default for TodoAppTemp {
     fn default() -> Self {
         Self {
             state: UiState::Normal,
+            font_defs_ui: FontDefsUi::default(),
+            font_defs_edit_copy: FontDefinitions::default(),
+            custom_edit_copy: Default::default(),
         }
     }
 }
@@ -52,6 +69,7 @@ pub enum UiState {
         topic_idx: Vec<usize>,
         task_idx: usize,
     },
+    FontCfg,
 }
 
 impl UiState {
