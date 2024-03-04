@@ -17,7 +17,7 @@ fn main() {
         native_options,
         Box::new(|ctx| {
             ctx.egui_ctx.set_visuals(Visuals::dark());
-            let app = match TodoApp::load() {
+            let mut app = match TodoApp::load() {
                 Ok(app) => app,
                 Err(e) => {
                     eprintln!("{:?}", e);
@@ -34,6 +34,7 @@ fn main() {
                 fonts.families = stored.families.clone();
             }
             egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
+            app.temp.font_defs_edit_copy = fonts.clone();
             ctx.egui_ctx.set_fonts(fonts);
             Box::new(app)
         }),

@@ -1018,7 +1018,7 @@ dependencies = [
 [[package]]
 name = "egui-fontcfg"
 version = "0.1.0"
-source = "git+https://github.com/crumblingstatue/egui-fontcfg.git#fb133b5ecd3c5575f02c5dce13e2b2268ed62610"
+source = "git+https://github.com/crumblingstatue/egui-fontcfg.git#574a9f19124fbc506fe9f33a975d4eff74015aed"
 dependencies = [
  "egui",
 ]

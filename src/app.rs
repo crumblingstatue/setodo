@@ -7,7 +7,7 @@ use {
         egui::{self, FontDefinitions, FontFamily, Key, ViewportCommand},
         Frame,
     },
-    egui_fontcfg::{CustomFonts, FontDefsUi},
+    egui_fontcfg::{CustomFontPaths, FontCfgUi},
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
     std::{collections::BTreeMap, error::Error, fs::File, path::PathBuf},
@@ -26,24 +26,24 @@ pub struct TodoApp {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StoredFontData {
     pub families: BTreeMap<FontFamily, Vec<String>>,
-    pub custom: CustomFonts,
+    pub custom: CustomFontPaths,
 }
 
 /// Transient data, not saved during serialization
 pub struct TodoAppTemp {
     pub state: UiState,
-    pub font_defs_ui: FontDefsUi,
+    pub font_defs_ui: FontCfgUi,
     /// Copy of FontDefs for editing through font config UI
     pub font_defs_edit_copy: FontDefinitions,
     /// Copy of CustomFonts for editing through font config UI
-    pub custom_edit_copy: CustomFonts,
+    pub custom_edit_copy: CustomFontPaths,
 }
 
 impl Default for TodoAppTemp {
     fn default() -> Self {
         Self {
             state: UiState::Normal,
-            font_defs_ui: FontDefsUi::default(),
+            font_defs_ui: Default::default(),
             font_defs_edit_copy: FontDefinitions::default(),
             custom_edit_copy: Default::default(),
         }
