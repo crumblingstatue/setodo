@@ -172,7 +172,7 @@ fn topics_ui(
                     let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
                     if re.clicked() {
                         any_clicked = true;
-                        *topic_sel = cursor.clone();
+                        topic_sel.clone_from(cursor);
                     }
                     if re.double_clicked() {
                         *state = UiState::RenameTopic {
@@ -185,7 +185,7 @@ fn topics_ui(
                         .show_header(ui, |ui| {
                             let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
                             if re.clicked() {
-                                *topic_sel = cursor.clone();
+                                topic_sel.clone_from(cursor);
                                 any_clicked = true;
                             }
                             if re.double_clicked() {
