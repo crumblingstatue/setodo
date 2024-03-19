@@ -18,9 +18,9 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
             ui.vertical(|ui| {
                 ui.heading("Topics");
                 let any_clicked = topics_ui(
-                    &mut app.topics,
+                    &mut app.per.topics,
                     &mut Vec::new(),
-                    &mut app.topic_sel,
+                    &mut app.per.topic_sel,
                     ui,
                     &mut app.temp.state,
                 );
@@ -34,7 +34,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         } else {
                             ui.text_edit_singleline(name).request_focus();
                             if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                                app.topics.push(Topic {
+                                app.per.topics.push(Topic {
                                     name: name.take(),
                                     desc: String::new(),
                                     tasks: Vec::new(),
@@ -43,7 +43,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 });
                                 app.temp.state = UiState::Normal;
                                 // TODO: Do something more reasonable here
-                                app.topic_sel.clear();
+                                app.per.topic_sel.clear();
                             }
                         }
                     }
@@ -56,7 +56,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         } else {
                             ui.text_edit_singleline(name).request_focus();
                             if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                                let topic = get_topic_mut(&mut app.topics, parent_idx);
+                                let topic = get_topic_mut(&mut app.per.topics, parent_idx);
                                 topic.children.push(Topic {
                                     name: name.take(),
                                     desc: String::new(),
@@ -66,7 +66,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 });
                                 app.temp.state = UiState::Normal;
                                 // TODO: Do something more reasonable here
-                                app.topic_sel.clear();
+                                app.per.topic_sel.clear();
                             }
                         }
                     }
@@ -74,16 +74,16 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         ui.label("Click on topic to move into!");
                         ui.label(any_clicked.to_string());
                         if any_clicked {
-                            move_topic(&mut app.topics, src_idx, &app.topic_sel);
+                            move_topic(&mut app.per.topics, src_idx, &app.per.topic_sel);
                             app.temp.state = UiState::Normal;
                         }
                     }
                     UiState::MoveTaskIntoTopic(task) => {
                         if any_clicked {
                             move_task_into_topic(
-                                &mut app.topics,
+                                &mut app.per.topics,
                                 std::mem::take(task),
-                                &app.topic_sel,
+                                &app.per.topic_sel,
                             );
                             app.temp.state = UiState::Normal;
                         }
@@ -95,17 +95,17 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             }
                             if ui
                                 .add_enabled(
-                                    !app.topic_sel.is_empty(),
+                                    !app.per.topic_sel.is_empty(),
                                     egui::Button::new(ph::TRASH),
                                 )
                                 .clicked()
-                                && !app.topic_sel.is_empty()
+                                && !app.per.topic_sel.is_empty()
                             {
-                                remove_topic(&mut app.topics, &app.topic_sel);
+                                remove_topic(&mut app.per.topics, &app.per.topic_sel);
                                 // TODO: Do something more reasonable
-                                app.topic_sel.clear();
+                                app.per.topic_sel.clear();
                             }
-                            if let Some(topic_sel) = app.topic_sel.last_mut() {
+                            if let Some(topic_sel) = app.per.topic_sel.last_mut() {
                                 if ui
                                     .add_enabled(
                                         *topic_sel > 0,
@@ -113,25 +113,26 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                     )
                                     .clicked()
                                 {
-                                    app.topics.swap(*topic_sel, *topic_sel - 1);
+                                    app.per.topics.swap(*topic_sel, *topic_sel - 1);
                                     *topic_sel -= 1;
                                 }
                                 if ui
                                     .add_enabled(
-                                        *topic_sel < app.topics.len() - 1,
+                                        *topic_sel < app.per.topics.len() - 1,
                                         egui::Button::new(ph::ARROW_FAT_DOWN),
                                     )
                                     .clicked()
                                 {
-                                    app.topics.swap(*topic_sel, *topic_sel + 1);
+                                    app.per.topics.swap(*topic_sel, *topic_sel + 1);
                                     *topic_sel += 1;
                                 }
                                 if ui.button("Add subtopic").clicked() {
-                                    app.temp.state = UiState::add_subtopic(app.topic_sel.clone());
+                                    app.temp.state =
+                                        UiState::add_subtopic(app.per.topic_sel.clone());
                                 }
                                 if ui.button("Move topic into").clicked() {
                                     app.temp.state =
-                                        UiState::move_topic_into(app.topic_sel.clone());
+                                        UiState::move_topic_into(app.per.topic_sel.clone());
                                 }
                             }
                         });
@@ -217,7 +218,7 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
             &mut app.temp.font_defs_edit_copy,
             Some(&mut app.temp.custom_edit_copy),
         ) {
-            app.stored_font_data = Some(StoredFontData {
+            app.per.stored_font_data = Some(StoredFontData {
                 families: app.temp.font_defs_edit_copy.families.clone(),
                 custom: app.temp.custom_edit_copy.clone(),
             });
@@ -229,8 +230,8 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         ui.set_min_height(cp_avail_height);
         let cp_avail_width = ui.available_width();
         ui.vertical(|ui| {
-            if !app.topic_sel.is_empty() {
-                let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
+            if !app.per.topic_sel.is_empty() {
+                let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
                 ui.horizontal(|ui| {
                     ui.heading(&topic.name);
                     ui.with_layout(
@@ -267,7 +268,9 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 }
                 ui.separator();
                 tasks_list_ui(ui, app);
-                if let Some(task_sel) = get_topic_mut(&mut app.topics, &app.topic_sel).task_sel {
+                if let Some(task_sel) =
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel
+                {
                     ui.separator();
                     task_ui(app, task_sel, ui, cp_avail_width);
                 }
@@ -283,7 +286,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         .id_source("tasks_scroll")
         .max_height(200.0)
         .show(ui, |ui| {
-            let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
+            let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
             for (i, task) in topic.tasks.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
                     ui.checkbox(&mut task.done, "");
@@ -295,7 +298,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         UiState::RenameTask {
                             task_idx,
                             topic_idx,
-                        } if topic_idx == &app.topic_sel && i == *task_idx => {
+                        } if topic_idx == &app.per.topic_sel && i == *task_idx => {
                             if ui.text_edit_singleline(&mut task.title).lost_focus() {
                                 app.temp.state = UiState::Normal;
                             }
@@ -307,7 +310,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             }
                             if re.double_clicked() {
                                 app.temp.state = UiState::RenameTask {
-                                    topic_idx: app.topic_sel.clone(),
+                                    topic_idx: app.per.topic_sel.clone(),
                                     task_idx: topic.task_sel.unwrap(),
                                 };
                             }
@@ -327,7 +330,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
             } else {
                 ui.text_edit_singleline(name).request_focus();
                 if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                    let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
+                    let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
                     topic.tasks.insert(
                         topic.task_sel.map(|idx| idx + 1).unwrap_or(0),
                         Task {
@@ -358,59 +361,72 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 app.temp.state = UiState::add_task();
             }
             if ui.button(ph::TRASH).clicked() {
-                if let Some(task_sel) = get_topic_mut(&mut app.topics, &app.topic_sel).task_sel {
-                    get_topic_mut(&mut app.topics, &app.topic_sel)
+                if let Some(task_sel) =
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel
+                {
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
                         .tasks
                         .remove(task_sel);
-                    if get_topic_mut(&mut app.topics, &app.topic_sel)
+                    if get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
                         .tasks
                         .is_empty()
                     {
-                        get_topic_mut(&mut app.topics, &app.topic_sel).task_sel = None;
+                        get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel = None;
                     } else {
-                        get_topic_mut(&mut app.topics, &app.topic_sel).task_sel =
-                            Some(task_sel.clamp(
+                        get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel = Some(
+                            task_sel.clamp(
                                 0,
-                                get_topic_mut(&mut app.topics, &app.topic_sel).tasks.len() - 1,
-                            ));
+                                get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
+                                    .tasks
+                                    .len()
+                                    - 1,
+                            ),
+                        );
                     }
                 }
             }
-            if let Some(task_sel) = get_topic_mut(&mut app.topics, &app.topic_sel).task_sel {
+            if let Some(task_sel) = get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel
+            {
                 if ui
                     .add_enabled(task_sel > 0, egui::Button::new(ph::ARROW_FAT_UP))
                     .clicked()
                 {
-                    get_topic_mut(&mut app.topics, &app.topic_sel)
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
                         .tasks
                         .swap(task_sel, task_sel - 1);
-                    get_topic_mut(&mut app.topics, &app.topic_sel).task_sel = Some(task_sel - 1);
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel =
+                        Some(task_sel - 1);
                 }
                 if ui
                     .add_enabled(
-                        task_sel < get_topic_mut(&mut app.topics, &app.topic_sel).tasks.len() - 1,
+                        task_sel
+                            < get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
+                                .tasks
+                                .len()
+                                - 1,
                         egui::Button::new(ph::ARROW_FAT_DOWN),
                     )
                     .clicked()
                 {
-                    get_topic_mut(&mut app.topics, &app.topic_sel)
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
                         .tasks
                         .swap(task_sel, task_sel + 1);
-                    get_topic_mut(&mut app.topics, &app.topic_sel).task_sel = Some(task_sel + 1);
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel =
+                        Some(task_sel + 1);
                 }
                 if ui
                     .button(ph::SORT_DESCENDING)
                     .on_hover_text("Auto sort")
                     .clicked()
                 {
-                    get_topic_mut(&mut app.topics, &app.topic_sel)
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
                         .tasks
                         .sort_by(|a, b| a.done.cmp(&b.done).then_with(|| a.title.cmp(&b.title)));
                 }
                 if ui.button("Move task into topic").clicked() {
-                    let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
+                    let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
                     app.temp.state = UiState::MoveTaskIntoTopic(topic.tasks.remove(task_sel));
-                    get_topic_mut(&mut app.topics, &app.topic_sel).task_sel = None;
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel = None;
                 }
             }
         }
@@ -419,11 +435,13 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
 
 /// UI for details about an individual task
 fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width: f32) {
-    let task = &mut get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel];
+    let task = &mut get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel];
     ui.heading(&task.title);
     let te = egui::TextEdit::multiline(&mut task.desc).desired_width(cp_avail_width);
     ui.add(te);
-    for attachment in &get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel].attachments {
+    for attachment in
+        &get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel].attachments
+    {
         ui.horizontal(|ui| {
             ui.label(attachment.filename.display().to_string());
             if ui.button("open").clicked() {
@@ -462,7 +480,7 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
             for path in paths {
                 if let Some(filename) = path.file_name() {
                     let data = std::fs::read(&path).unwrap();
-                    get_topic_mut(&mut app.topics, &app.topic_sel).tasks[task_sel]
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel]
                         .attachments
                         .push(Attachment {
                             filename: filename.into(),
