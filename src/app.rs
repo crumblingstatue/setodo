@@ -70,6 +70,7 @@ pub enum UiState {
         task_idx: usize,
     },
     FontCfg,
+    EditTopicDesc,
 }
 
 impl UiState {

@@ -231,8 +231,40 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         ui.vertical(|ui| {
             if !app.topic_sel.is_empty() {
                 let topic = get_topic_mut(&mut app.topics, &app.topic_sel);
-                ui.heading(&topic.name);
-                ui.text_edit_multiline(&mut topic.desc);
+                ui.horizontal(|ui| {
+                    ui.heading(&topic.name);
+                    ui.with_layout(
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| match app.temp.state {
+                            UiState::EditTopicDesc => {
+                                if ui
+                                    .button(egui_phosphor::regular::X_CIRCLE)
+                                    .on_hover_text("Stop editing")
+                                    .clicked()
+                                {
+                                    app.temp.state = UiState::Normal;
+                                }
+                            }
+                            _ => {
+                                if ui
+                                    .button(egui_phosphor::regular::PENCIL)
+                                    .on_hover_text("Edit description")
+                                    .clicked()
+                                {
+                                    app.temp.state = UiState::EditTopicDesc;
+                                }
+                            }
+                        },
+                    );
+                });
+                match app.temp.state {
+                    UiState::EditTopicDesc => {
+                        ui.text_edit_multiline(&mut topic.desc);
+                    }
+                    _ => {
+                        ui.label(&topic.desc);
+                    }
+                }
                 ui.separator();
                 tasks_list_ui(ui, app);
                 if let Some(task_sel) = get_topic_mut(&mut app.topics, &app.topic_sel).task_sel {
