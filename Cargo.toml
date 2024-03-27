@@ -6,13 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = { version = "0.26.0-alpha.2", default-features=false, features = ["persistence", "glow", "x11"] }
+eframe = { version = "0.27.0", default-features=false, features = ["persistence", "glow", "x11"] }
 rmp-serde = "1.1.2"
 dirs = "5.0.1"
 rfd = "0.13.0"
 open = "5.0.1"
 zstd = "0.13.0"
-egui-phosphor = { git = "https://github.com/crumblingstatue/egui-phosphor.git" }
+egui-phosphor = { git = "https://github.com/hacknus/egui-phosphor.git" } # https://github.com/amPerl/egui-phosphor.git
 egui-fontcfg = { git = "https://github.com/crumblingstatue/egui-fontcfg.git" }
 existing_instance = { git = "https://github.com/crumblingstatue/rust-existing-instance.git" }
 
