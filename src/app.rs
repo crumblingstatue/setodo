@@ -4,12 +4,11 @@ use {
         ui::{central_panel_ui, tree_view_ui},
     },
     eframe::{
-        egui::{self, FontDefinitions, FontFamily, Key, ViewportCommand},
+        egui::{self, FontDefinitions, FontFamily},
         Frame,
     },
     egui_commonmark::CommonMarkCache,
     egui_fontcfg::{CustomFontPaths, FontCfgUi},
-    existing_instance::Listener,
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
     std::{collections::BTreeMap, error::Error, fs::File, path::PathBuf},
@@ -42,19 +41,17 @@ pub struct TodoAppTemp {
     pub font_defs_edit_copy: FontDefinitions,
     /// Copy of CustomFonts for editing through font config UI
     pub custom_edit_copy: CustomFontPaths,
-    pub ipc_listener: Listener,
     pub cm_cache: CommonMarkCache,
     pub view_task_as_markdown: bool,
 }
 
 impl TodoAppTemp {
-    fn new(ipc_listener: Listener) -> Self {
+    fn new() -> Self {
         Self {
             state: UiState::Normal,
             font_defs_ui: Default::default(),
             font_defs_edit_copy: FontDefinitions::default(),
             custom_edit_copy: Default::default(),
-            ipc_listener,
             cm_cache: CommonMarkCache::default(),
             view_task_as_markdown: false,
         }
@@ -106,49 +103,20 @@ fn file_name() -> PathBuf {
     dirs::home_dir().unwrap().join(".setodo.dat")
 }
 
-pub struct LoadError {
-    pub listener: Listener,
-    pub error: Box<dyn Error>,
-}
-
 impl TodoApp {
-    pub fn new(listener: Listener) -> Self {
+    pub fn new() -> Self {
         Self {
             per: TodoAppPersistent::default(),
-            temp: TodoAppTemp::new(listener),
+            temp: TodoAppTemp::new(),
         }
     }
-    pub fn load(listener: Listener) -> Result<Self, LoadError> {
-        let file = match File::open(file_name()) {
-            Ok(file) => file,
-            Err(e) => {
-                return Err(LoadError {
-                    listener,
-                    error: e.into(),
-                })
-            }
-        };
-        let dec = match zstd::stream::read::Decoder::new(file) {
-            Ok(dec) => dec,
-            Err(e) => {
-                return Err(LoadError {
-                    listener,
-                    error: e.into(),
-                })
-            }
-        };
-        let per: TodoAppPersistent = match rmp_serde::from_read(dec) {
-            Ok(per) => per,
-            Err(e) => {
-                return Err(LoadError {
-                    listener,
-                    error: e.into(),
-                })
-            }
-        };
+    pub fn load() -> Result<Self, Box<dyn Error>> {
+        let file = File::open(file_name())?;
+        let dec = zstd::stream::read::Decoder::new(file)?;
+        let per: TodoAppPersistent = rmp_serde::from_read(dec)?;
         Ok(Self {
             per,
-            temp: TodoAppTemp::new(listener),
+            temp: TodoAppTemp::new(),
         })
     }
     fn save(&self) -> Result<(), Box<dyn Error>> {
@@ -166,16 +134,11 @@ impl eframe::App for TodoApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
-        if self.temp.ipc_listener.accept().is_some() {
-            ctx.send_viewport_cmd(ViewportCommand::Visible(true));
-            ctx.send_viewport_cmd(ViewportCommand::Focus);
-        }
-        if ctx.input(|inp| inp.key_pressed(Key::Escape)) {
-            ctx.send_viewport_cmd(ViewportCommand::Visible(false));
-        }
         egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
-        ctx.request_repaint();
+        if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+        }
     }
 }
 

@@ -2,6 +2,7 @@ use {
     app::TodoApp,
     eframe::egui::{self, ViewportBuilder, Visuals},
     existing_instance::Endpoint,
+    std::time::Duration,
 };
 
 mod app;
@@ -24,13 +25,21 @@ fn main() {
     eframe::run_native(
         "Simple egui todo",
         native_options,
-        Box::new(|ctx| {
-            ctx.egui_ctx.set_visuals(Visuals::dark());
-            let mut app = match TodoApp::load(ipc_listener) {
+        Box::new(|c_ctx| {
+            let egui_ctx = c_ctx.egui_ctx.clone();
+            std::thread::spawn(move || loop {
+                if ipc_listener.accept().is_some() {
+                    egui_ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                    egui_ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                }
+                std::thread::sleep(Duration::from_millis(250));
+            });
+            c_ctx.egui_ctx.set_visuals(Visuals::dark());
+            let mut app = match TodoApp::load() {
                 Ok(app) => app,
                 Err(e) => {
-                    eprintln!("{:?}", e.error);
-                    TodoApp::new(e.listener)
+                    eprintln!("{:?}", e);
+                    TodoApp::new()
                 }
             };
             let mut fonts = egui::FontDefinitions::default();
@@ -44,7 +53,7 @@ fn main() {
             }
             egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
             app.temp.font_defs_edit_copy = fonts.clone();
-            ctx.egui_ctx.set_fonts(fonts);
+            c_ctx.egui_ctx.set_fonts(fonts);
             Box::new(app)
         }),
     )
