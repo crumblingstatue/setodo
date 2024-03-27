@@ -25,3 +25,8 @@ git = "https://github.com/crumblingstatue/egui_commonmark.git"
 branch = "mutable-checkbox"
 default-features = false
 features = ["pulldown_cmark"]
+
+[profile.release]
+panic = "abort"
+strip = true
+lto = "thin"
