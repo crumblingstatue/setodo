@@ -7,6 +7,7 @@ use {
         data::{Attachment, Task, Topic},
     },
     eframe::egui::{self, collapsing_header::CollapsingState, ScrollArea, TextBuffer},
+    egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,
     egui_phosphor::regular as ph,
 };
@@ -436,9 +437,27 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
 /// UI for details about an individual task
 fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width: f32) {
     let task = &mut get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel];
-    ui.heading(&task.title);
-    let te = egui::TextEdit::multiline(&mut task.desc).desired_width(cp_avail_width);
-    ui.add(te);
+    ui.horizontal(|ui| {
+        ui.heading(&task.title);
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.checkbox(&mut app.temp.view_task_as_markdown, "Markdown view");
+        });
+    });
+    if app.temp.view_task_as_markdown {
+        CommonMarkViewer::new("cm_viewer").show(ui, &mut app.temp.cm_cache, &task.desc);
+    } else {
+        let te = egui::TextEdit::multiline(&mut task.desc)
+            .code_editor()
+            .desired_width(cp_avail_width);
+        ui.add(te);
+    }
+    for (checked, span) in app.temp.cm_cache.checkmark_clicks.drain(..) {
+        if checked {
+            task.desc.replace_range(span, "[x]")
+        } else {
+            task.desc.replace_range(span, "[ ]")
+        }
+    }
     for attachment in
         &get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel].attachments
     {

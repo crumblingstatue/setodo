@@ -7,6 +7,7 @@ use {
         egui::{self, FontDefinitions, FontFamily, Key, ViewportCommand},
         Frame,
     },
+    egui_commonmark::CommonMarkCache,
     egui_fontcfg::{CustomFontPaths, FontCfgUi},
     existing_instance::Listener,
     rmp_serde::Serializer,
@@ -42,6 +43,8 @@ pub struct TodoAppTemp {
     /// Copy of CustomFonts for editing through font config UI
     pub custom_edit_copy: CustomFontPaths,
     pub ipc_listener: Listener,
+    pub cm_cache: CommonMarkCache,
+    pub view_task_as_markdown: bool,
 }
 
 impl TodoAppTemp {
@@ -52,6 +55,8 @@ impl TodoAppTemp {
             font_defs_edit_copy: FontDefinitions::default(),
             custom_edit_copy: Default::default(),
             ipc_listener,
+            cm_cache: CommonMarkCache::default(),
+            view_task_as_markdown: false,
         }
     }
 }

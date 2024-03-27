@@ -19,3 +19,9 @@ existing_instance = { git = "https://github.com/crumblingstatue/rust-existing-in
 [dependencies.serde]
 version = "1.0.195"
 features = ["derive"]
+
+[dependencies.egui_commonmark]
+git = "https://github.com/crumblingstatue/egui_commonmark.git"
+branch = "mutable-checkbox"
+default-features = false
+features = ["pulldown_cmark"]
