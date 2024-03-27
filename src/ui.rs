@@ -455,19 +455,12 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
         });
     });
     if app.temp.view_task_as_markdown {
-        CommonMarkViewer::new("cm_viewer").show(ui, &mut app.temp.cm_cache, &task.desc);
+        CommonMarkViewer::new("cm_viewer").show_mut(ui, &mut app.temp.cm_cache, &mut task.desc);
     } else {
         let te = egui::TextEdit::multiline(&mut task.desc)
             .code_editor()
             .desired_width(cp_avail_width);
         ui.add(te);
-    }
-    for (checked, span) in app.temp.cm_cache.checkmark_clicks.drain(..) {
-        if checked {
-            task.desc.replace_range(span, "[x]")
-        } else {
-            task.desc.replace_range(span, "[ ]")
-        }
     }
     for attachment in
         &get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel].attachments

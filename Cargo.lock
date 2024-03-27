@@ -693,7 +693,7 @@ dependencies = [
 [[package]]
 name = "egui_commonmark"
 version = "0.14.0"
-source = "git+https://github.com/crumblingstatue/egui_commonmark.git?branch=mutable-checkbox#3b9bdf1e37c796e46a35b7d67b822846b543f55c"
+source = "git+https://github.com/crumblingstatue/egui_commonmark.git?branch=mutable-checkbox#9da61b24958b367425cfbe7e385f7ef40ee0d626"
 dependencies = [
  "egui",
  "egui_extras",
