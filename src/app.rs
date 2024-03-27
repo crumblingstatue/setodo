@@ -167,10 +167,11 @@ impl eframe::App for TodoApp {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
         if self.temp.ipc_listener.accept().is_some() {
+            ctx.send_viewport_cmd(ViewportCommand::Visible(true));
             ctx.send_viewport_cmd(ViewportCommand::Focus);
         }
         if ctx.input(|inp| inp.key_pressed(Key::Escape)) {
-            ctx.send_viewport_cmd(ViewportCommand::Close);
+            ctx.send_viewport_cmd(ViewportCommand::Visible(false));
         }
         egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
