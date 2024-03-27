@@ -6,7 +6,10 @@ use {
         },
         data::{Attachment, Task, Topic},
     },
-    eframe::egui::{self, collapsing_header::CollapsingState, ScrollArea, TextBuffer},
+    constcat::concat as cc,
+    eframe::egui::{
+        self, collapsing_header::CollapsingState, ScrollArea, TextBuffer, ViewportCommand,
+    },
     egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,
     egui_phosphor::regular as ph,
@@ -17,7 +20,15 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         .id_source("topics_scroll")
         .show(ui, |ui| {
             ui.vertical(|ui| {
-                ui.heading("Topics");
+                ui.horizontal(|ui| {
+                    ui.heading("Topics");
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button(cc!(ph::DOOR_OPEN, " Quit")).clicked() {
+                            ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+                        }
+                        ui.label("Hide: Esc");
+                    });
+                });
                 let any_clicked = topics_ui(
                     &mut app.per.topics,
                     &mut Vec::new(),
