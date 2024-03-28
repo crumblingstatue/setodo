@@ -1,6 +1,6 @@
 use {
     crate::{
-        data::{Task, Topic},
+        data::{Entry, Topic},
         ui::{central_panel_ui, tree_view_ui},
     },
     eframe::{
@@ -69,7 +69,7 @@ pub enum UiState {
     MoveTopicInto {
         src_idx: Vec<usize>,
     },
-    MoveTaskIntoTopic(Task),
+    MoveTaskIntoTopic(Entry),
     RenameTopic {
         idx: Vec<usize>,
     },
@@ -142,9 +142,9 @@ impl eframe::App for TodoApp {
     }
 }
 
-pub fn move_task_into_topic(topics: &mut [Topic], task: Task, topic_sel: &[usize]) {
+pub fn move_task_into_topic(topics: &mut [Topic], task: Entry, topic_sel: &[usize]) {
     let topic = get_topic_mut(topics, topic_sel);
-    topic.tasks.push(task);
+    topic.entries.push(task);
 }
 
 pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize]) {

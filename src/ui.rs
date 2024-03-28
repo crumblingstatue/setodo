@@ -4,7 +4,7 @@ use {
             get_topic_mut, move_task_into_topic, move_topic, remove_topic, StoredFontData, TodoApp,
             UiState,
         },
-        data::{Attachment, Task, Topic},
+        data::{Attachment, Entry, EntryKind, Topic},
     },
     constcat::concat as cc,
     eframe::egui::{
@@ -52,7 +52,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 app.per.topics.push(Topic {
                                     name: name.take(),
                                     desc: String::new(),
-                                    tasks: Vec::new(),
+                                    entries: Vec::new(),
                                     task_sel: None,
                                     children: Vec::new(),
                                 });
@@ -75,7 +75,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 topic.children.push(Topic {
                                     name: name.take(),
                                     desc: String::new(),
-                                    tasks: Vec::new(),
+                                    entries: Vec::new(),
                                     task_sel: None,
                                     children: Vec::new(),
                                 });
@@ -295,18 +295,24 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
 }
 
 fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
-    ui.heading("Tasks");
     ScrollArea::vertical()
         .auto_shrink([false; 2])
         .id_source("tasks_scroll")
         .max_height(200.0)
         .show(ui, |ui| {
             let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
-            for (i, task) in topic.tasks.iter_mut().enumerate() {
+            for (i, entry) in topic.entries.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
-                    ui.checkbox(&mut task.done, "");
-                    let mut text = egui::RichText::new(&task.title);
-                    if task.done {
+                    match entry.kind {
+                        EntryKind::Task => {
+                            ui.checkbox(&mut entry.done, "");
+                        }
+                        EntryKind::Info => {
+                            ui.label("ℹ");
+                        }
+                    }
+                    let mut text = egui::RichText::new(&entry.title);
+                    if entry.done {
                         text = text.strikethrough();
                     }
                     match &app.temp.state {
@@ -314,7 +320,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             task_idx,
                             topic_idx,
                         } if topic_idx == &app.per.topic_sel && i == *task_idx => {
-                            if ui.text_edit_singleline(&mut task.title).lost_focus() {
+                            if ui.text_edit_singleline(&mut entry.title).lost_focus() {
                                 app.temp.state = UiState::Normal;
                             }
                         }
@@ -346,19 +352,20 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 ui.text_edit_singleline(name).request_focus();
                 if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
                     let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
-                    topic.tasks.insert(
+                    topic.entries.insert(
                         topic.task_sel.map(|idx| idx + 1).unwrap_or(0),
-                        Task {
+                        Entry {
                             title: name.take(),
                             desc: String::new(),
                             done: false,
                             attachments: Vec::new(),
+                            kind: EntryKind::Task,
                         },
                     );
                     app.temp.state = UiState::Normal;
                     match &mut topic.task_sel {
                         Some(sel) => {
-                            if *sel + 1 < topic.tasks.len() {
+                            if *sel + 1 < topic.entries.len() {
                                 *sel += 1;
                             }
                         }
@@ -380,10 +387,10 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel
                 {
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                        .tasks
+                        .entries
                         .remove(task_sel);
                     if get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                        .tasks
+                        .entries
                         .is_empty()
                     {
                         get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel = None;
@@ -392,7 +399,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             task_sel.clamp(
                                 0,
                                 get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                                    .tasks
+                                    .entries
                                     .len()
                                     - 1,
                             ),
@@ -407,7 +414,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .clicked()
                 {
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                        .tasks
+                        .entries
                         .swap(task_sel, task_sel - 1);
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel =
                         Some(task_sel - 1);
@@ -416,7 +423,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .add_enabled(
                         task_sel
                             < get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                                .tasks
+                                .entries
                                 .len()
                                 - 1,
                         egui::Button::new(ph::ARROW_FAT_DOWN),
@@ -424,7 +431,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .clicked()
                 {
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                        .tasks
+                        .entries
                         .swap(task_sel, task_sel + 1);
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel =
                         Some(task_sel + 1);
@@ -435,22 +442,51 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .clicked()
                 {
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel)
-                        .tasks
+                        .entries
                         .sort_by(|a, b| a.done.cmp(&b.done).then_with(|| a.title.cmp(&b.title)));
                 }
-                if ui.button("Move task into topic").clicked() {
+                if ui
+                    .button("⬈ Move")
+                    .on_hover_text("Move into another topic")
+                    .clicked()
+                {
                     let topic = get_topic_mut(&mut app.per.topics, &app.per.topic_sel);
-                    app.temp.state = UiState::MoveTaskIntoTopic(topic.tasks.remove(task_sel));
+                    app.temp.state = UiState::MoveTaskIntoTopic(topic.entries.remove(task_sel));
                     get_topic_mut(&mut app.per.topics, &app.per.topic_sel).task_sel = None;
                 }
+                let entry =
+                    &mut get_topic_mut(&mut app.per.topics, &app.per.topic_sel).entries[task_sel];
+                egui::ComboBox::new("kind_combo", "Kind")
+                    .selected_text(entry.kind.label())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut entry.kind,
+                            EntryKind::Task,
+                            EntryKind::Task.label(),
+                        );
+                        ui.selectable_value(
+                            &mut entry.kind,
+                            EntryKind::Info,
+                            EntryKind::Info.label(),
+                        );
+                    });
             }
         }
     });
 }
 
+impl EntryKind {
+    fn label(&self) -> &'static str {
+        match self {
+            EntryKind::Task => "☑ Task",
+            EntryKind::Info => "ℹ Info",
+        }
+    }
+}
+
 /// UI for details about an individual task
 fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width: f32) {
-    let task = &mut get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel];
+    let task = &mut get_topic_mut(&mut app.per.topics, &app.per.topic_sel).entries[task_sel];
     ui.horizontal(|ui| {
         ui.heading(&task.title);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -466,7 +502,7 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
         ui.add(te);
     }
     for attachment in
-        &get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel].attachments
+        &get_topic_mut(&mut app.per.topics, &app.per.topic_sel).entries[task_sel].attachments
     {
         ui.horizontal(|ui| {
             ui.label(attachment.filename.display().to_string());
@@ -506,7 +542,7 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
             for path in paths {
                 if let Some(filename) = path.file_name() {
                     let data = std::fs::read(&path).unwrap();
-                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).tasks[task_sel]
+                    get_topic_mut(&mut app.per.topics, &app.per.topic_sel).entries[task_sel]
                         .attachments
                         .push(Attachment {
                             filename: filename.into(),
