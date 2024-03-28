@@ -26,7 +26,10 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         if ui.button(cc!(ph::DOOR_OPEN, " Quit")).clicked() {
                             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
                         }
-                        ui.label("Hide: Esc");
+                        if ui.button("👁 Hide").on_hover_text("Hotkey: Esc").clicked() {
+                            ui.ctx()
+                                .send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                        };
                     });
                 });
                 let any_clicked = topics_ui(
