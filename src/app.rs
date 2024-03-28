@@ -43,6 +43,9 @@ pub struct TodoAppTemp {
     pub custom_edit_copy: CustomFontPaths,
     pub cm_cache: CommonMarkCache,
     pub view_task_as_markdown: bool,
+    pub find_string: String,
+    /// If true, pressing Esc won't hide the window like it usually does
+    pub esc_was_used: bool,
 }
 
 impl TodoAppTemp {
@@ -54,6 +57,8 @@ impl TodoAppTemp {
             custom_edit_copy: Default::default(),
             cm_cache: CommonMarkCache::default(),
             view_task_as_markdown: false,
+            find_string: String::new(),
+            esc_was_used: false,
         }
     }
 }
@@ -136,9 +141,10 @@ impl eframe::App for TodoApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
         egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
-        if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) {
+        if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) && !self.temp.esc_was_used {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
         }
+        self.temp.esc_was_used = false;
     }
 }
 

@@ -16,6 +16,7 @@ use {
 };
 
 pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
+    let esc_pressed = ui.input(|inp| inp.key_pressed(egui::Key::Escape));
     ScrollArea::vertical()
         .id_source("topics_scroll")
         .show(ui, |ui| {
@@ -30,8 +31,23 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             ui.ctx()
                                 .send_viewport_cmd(egui::ViewportCommand::Visible(false));
                         };
+                        let re = ui.add(
+                            egui::TextEdit::singleline(&mut app.temp.find_string)
+                                .hint_text("🔍 Find (ctrl+F)"),
+                        );
+                        if ui.input(|inp| inp.modifiers.ctrl && inp.key_pressed(egui::Key::F)) {
+                            re.request_focus();
+                        }
+                        if !app.temp.find_string.is_empty() && esc_pressed {
+                            app.temp.esc_was_used = true;
+                            app.temp.find_string.clear();
+                        }
                     });
                 });
+                if !app.temp.find_string.is_empty() {
+                    find_ui(ui, app);
+                    return;
+                }
                 let any_clicked = topics_ui(
                     &mut app.per.topics,
                     &mut Vec::new(),
@@ -164,6 +180,74 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 }
             });
         });
+}
+
+fn find_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
+    let find_str = &app.temp.find_string;
+    for matched_topic in collect_matches(&app.per.topics, find_str) {
+        let topic = get_topic_mut(&mut app.per.topics, &matched_topic.cursor);
+        if ui.link(&topic.name).clicked() {
+            app.per.topic_sel = matched_topic.cursor;
+            return;
+        }
+        ui.indent("find_ui_indent", |ui| {
+            for en_idx in matched_topic.matching_entries {
+                if ui.link(&topic.entries[en_idx].title).clicked() {
+                    app.per.topic_sel = matched_topic.cursor;
+                    topic.task_sel = Some(en_idx);
+                    return;
+                }
+            }
+        });
+    }
+}
+
+struct MatchingTopic {
+    cursor: Vec<usize>,
+    matching_entries: Vec<usize>,
+}
+
+fn collect_matches(topics: &[Topic], find_str: &str) -> Vec<MatchingTopic> {
+    let mut matches = Vec::new();
+    let cursor = vec![];
+    collect_matches_inner(topics, find_str, cursor, &mut matches);
+    matches
+}
+
+fn collect_matches_inner(
+    topics: &[Topic],
+    find_str: &str,
+    cursor: Vec<usize>,
+    matches: &mut Vec<MatchingTopic>,
+) {
+    for (i, topic) in topics.iter().enumerate() {
+        let mut new_cursor = cursor.clone();
+        new_cursor.push(i);
+        if let Some(topic) = matching_topic(topic, find_str, new_cursor.clone()) {
+            matches.push(topic);
+        }
+        collect_matches_inner(&topic.children, find_str, new_cursor, matches);
+    }
+}
+
+fn matching_topic(topic: &Topic, find_str: &str, cursor: Vec<usize>) -> Option<MatchingTopic> {
+    let find_lower = &find_str.to_ascii_lowercase();
+    let mut is_match = false;
+    is_match |= topic.name.to_ascii_lowercase().contains(find_lower)
+        || topic.desc.to_ascii_lowercase().contains(find_lower);
+    let mut matching_entries = Vec::new();
+    for (i, en) in topic.entries.iter().enumerate() {
+        if en.title.to_ascii_lowercase().contains(find_lower)
+            || en.desc.to_ascii_lowercase().contains(find_lower)
+        {
+            matching_entries.push(i);
+        }
+    }
+    is_match |= !matching_entries.is_empty();
+    is_match.then_some(MatchingTopic {
+        cursor,
+        matching_entries,
+    })
 }
 
 fn topics_ui(
