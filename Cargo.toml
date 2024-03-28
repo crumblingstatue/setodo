@@ -22,8 +22,7 @@ version = "1.0.195"
 features = ["derive"]
 
 [dependencies.egui_commonmark]
-git = "https://github.com/crumblingstatue/egui_commonmark.git"
-branch = "mutable-checkbox"
+git = "https://github.com/lampsitter/egui_commonmark.git"
 default-features = false
 features = ["pulldown_cmark"]
 
