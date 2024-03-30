@@ -200,26 +200,34 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 // TODO: Do something more reasonable
                                 app.per.topic_sel.clear();
                             }
-                            if let Some(topic_sel) = app.per.topic_sel.last_mut() {
+                            if let Some((last, first_chunk)) = app.per.topic_sel.split_last_mut() {
+                                let topics = if first_chunk.is_empty() {
+                                    &mut app.per.topics
+                                } else {
+                                    match get_topic_mut(&mut app.per.topics, first_chunk) {
+                                        Some(topic) => &mut topic.children,
+                                        None => {
+                                            ui.label("TODO: Bug (probably)");
+                                            return;
+                                        }
+                                    }
+                                };
                                 if ui
-                                    .add_enabled(
-                                        *topic_sel > 0,
-                                        egui::Button::new(ph::ARROW_FAT_UP),
-                                    )
+                                    .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
                                     .clicked()
                                 {
-                                    app.per.topics.swap(*topic_sel, *topic_sel - 1);
-                                    *topic_sel -= 1;
+                                    topics.swap(*last, *last - 1);
+                                    *last -= 1;
                                 }
                                 if ui
                                     .add_enabled(
-                                        *topic_sel < app.per.topics.len() - 1,
+                                        *last < topics.len() - 1,
                                         egui::Button::new(ph::ARROW_FAT_DOWN),
                                     )
                                     .clicked()
                                 {
-                                    app.per.topics.swap(*topic_sel, *topic_sel + 1);
-                                    *topic_sel += 1;
+                                    topics.swap(*last, *last + 1);
+                                    *last += 1;
                                 }
                                 if ui.button("Add subtopic").clicked() {
                                     app.temp.state =
