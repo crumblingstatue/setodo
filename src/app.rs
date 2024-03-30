@@ -167,6 +167,9 @@ impl eframe::App for TodoApp {
         egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
         if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) && !self.temp.esc_was_used {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+            if let Err(e) = self.save_persistent() {
+                eprintln!("Autosave error: {e}");
+            }
         }
         self.temp.esc_was_used = false;
     }

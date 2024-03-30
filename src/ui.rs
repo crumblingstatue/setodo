@@ -76,6 +76,9 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         if ui.button("👁 Hide").on_hover_text("Hotkey: Esc").clicked() {
                             ui.ctx()
                                 .send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                            if let Err(e) = app.save_persistent() {
+                                eprintln!("Autosave error: {e}");
+                            }
                         };
                         let re = ui.add(
                             egui::TextEdit::singleline(&mut app.temp.find_string)
