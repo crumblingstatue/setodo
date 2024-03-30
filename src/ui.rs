@@ -2,7 +2,7 @@ use {
     crate::{
         app::{
             get_topic_mut, get_topic_mut_or_panic, move_task_into_topic, move_topic, remove_topic,
-            StoredFontData, TodoApp, UiState,
+            StoredFontData, TodoApp, TodoAppTemp, UiState,
         },
         data::{Attachment, Entry, EntryKind, Topic},
     },
@@ -434,32 +434,36 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     }
                 }
                 ui.separator();
-                tasks_list_ui(ui, app);
-                if let Some(task_sel) =
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel
+                tasks_list_ui(ui, &mut app.temp, topic, &app.per.topic_sel);
+                if let Some(sel) = topic.task_sel
+                    && let Some(en) = topic.entries.get_mut(sel)
                 {
                     ui.separator();
-                    task_ui(app, task_sel, ui, cp_avail_width);
+                    task_ui(en, &mut app.temp, ui, cp_avail_width);
                 }
             }
         });
     });
 }
 
-fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
+fn tasks_list_ui(
+    ui: &mut egui::Ui,
+    app_temp: &mut TodoAppTemp,
+    topic: &mut Topic,
+    topic_sel: &[usize],
+) {
     ScrollArea::vertical()
         .auto_shrink([false; 2])
         .id_source("tasks_scroll")
         .max_height(200.0)
         .show(ui, |ui| {
-            let topic = get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel);
             for (i, entry) in topic.entries.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
                     match entry.kind {
                         EntryKind::Task => {
                             let re = ui.checkbox(&mut entry.done, "");
                             if re.changed() {
-                                app.temp.per_dirty = true;
+                                app_temp.per_dirty = true;
                             }
                         }
                         EntryKind::Info => {
@@ -470,13 +474,13 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     if entry.done {
                         text = text.strikethrough();
                     }
-                    match &app.temp.state {
+                    match &app_temp.state {
                         UiState::RenameTask {
                             task_idx,
                             topic_idx,
-                        } if topic_idx == &app.per.topic_sel && i == *task_idx => {
+                        } if topic_idx == topic_sel && i == *task_idx => {
                             if ui.text_edit_singleline(&mut entry.title).lost_focus() {
-                                app.temp.state = UiState::Normal;
+                                app_temp.state = UiState::Normal;
                             }
                         }
                         _ => {
@@ -485,8 +489,8 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 topic.task_sel = Some(i);
                             }
                             if re.double_clicked() {
-                                app.temp.state = UiState::RenameTask {
-                                    topic_idx: app.per.topic_sel.clone(),
+                                app_temp.state = UiState::RenameTask {
+                                    topic_idx: topic_sel.to_vec(),
                                     task_idx: topic.task_sel.unwrap(),
                                 };
                             }
@@ -496,17 +500,16 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
             }
         });
     ui.separator();
-    ui.horizontal(|ui| match &mut app.temp.state {
+    ui.horizontal(|ui| match &mut app_temp.state {
         UiState::AddTask(name) => {
             let clicked = ui.button(ph::CHECK_FAT).clicked();
             if ui.button(ph::X_CIRCLE).clicked()
                 || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
             {
-                app.temp.state = UiState::Normal;
+                app_temp.state = UiState::Normal;
             } else {
                 ui.text_edit_singleline(name).request_focus();
                 if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                    let topic = get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel);
                     topic.entries.insert(
                         topic.task_sel.map(|idx| idx + 1).unwrap_or(0),
                         Entry {
@@ -517,7 +520,7 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             kind: EntryKind::Task,
                         },
                     );
-                    app.temp.state = UiState::Normal;
+                    app_temp.state = UiState::Normal;
                     match &mut topic.task_sel {
                         Some(sel) => {
                             if *sel + 1 < topic.entries.len() {
@@ -535,71 +538,42 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
             if ui.button(ph::FILE_PLUS).clicked()
                 || ui.input(|inp| inp.key_pressed(egui::Key::Insert))
             {
-                app.temp.state = UiState::add_task();
+                app_temp.state = UiState::add_task();
             }
             if ui.button(ph::TRASH).clicked() {
-                if let Some(task_sel) =
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel
-                {
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
-                        .entries
-                        .remove(task_sel);
-                    if get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
-                        .entries
-                        .is_empty()
-                    {
-                        get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel =
-                            None;
+                if let Some(task_sel) = topic.task_sel {
+                    topic.entries.remove(task_sel);
+                    if topic.entries.is_empty() {
+                        topic.task_sel = None;
                     } else {
-                        get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel =
-                            Some(
-                                task_sel.clamp(
-                                    0,
-                                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
-                                        .entries
-                                        .len()
-                                        - 1,
-                                ),
-                            );
+                        topic.task_sel = Some(task_sel.clamp(0, topic.entries.len() - 1));
                     }
                 }
             }
-            if let Some(task_sel) =
-                get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel
-            {
+            if let Some(task_sel) = topic.task_sel {
                 if ui
                     .add_enabled(task_sel > 0, egui::Button::new(ph::ARROW_FAT_UP))
                     .clicked()
                 {
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
-                        .entries
-                        .swap(task_sel, task_sel - 1);
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel =
-                        Some(task_sel - 1);
+                    topic.entries.swap(task_sel, task_sel - 1);
+                    topic.task_sel = Some(task_sel - 1);
                 }
                 if ui
                     .add_enabled(
-                        task_sel
-                            < get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
-                                .entries
-                                .len()
-                                - 1,
+                        task_sel < topic.entries.len() - 1,
                         egui::Button::new(ph::ARROW_FAT_DOWN),
                     )
                     .clicked()
                 {
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
-                        .entries
-                        .swap(task_sel, task_sel + 1);
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel =
-                        Some(task_sel + 1);
+                    topic.entries.swap(task_sel, task_sel + 1);
+                    topic.task_sel = Some(task_sel + 1);
                 }
                 if ui
                     .button(ph::SORT_DESCENDING)
                     .on_hover_text("Auto sort")
                     .clicked()
                 {
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel)
+                    topic
                         .entries
                         .sort_by(|a, b| a.done.cmp(&b.done).then_with(|| a.title.cmp(&b.title)));
                 }
@@ -608,14 +582,9 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .on_hover_text("Move into another topic")
                     .clicked()
                 {
-                    let topic = get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel);
-                    app.temp.state = UiState::MoveTaskIntoTopic(topic.entries.remove(task_sel));
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).task_sel = None;
+                    app_temp.state = UiState::MoveTaskIntoTopic(topic.entries.remove(task_sel));
+                    topic.task_sel = None;
                 }
-                let Some(topic) = get_topic_mut(&mut app.per.topics, &app.per.topic_sel) else {
-                    ui.label("<error getting topic>");
-                    return;
-                };
                 let Some(entry) = topic.entries.get_mut(task_sel) else {
                     ui.label("<error getting entry>");
                     return;
@@ -649,36 +618,31 @@ impl EntryKind {
 }
 
 /// UI for details about an individual task
-fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width: f32) {
-    let task =
-        &mut get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).entries[task_sel];
+fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_avail_width: f32) {
     ui.horizontal(|ui| {
-        ui.heading(&task.title);
+        ui.heading(&entry.title);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.checkbox(&mut app.temp.view_task_as_markdown, "Markdown")
+            ui.checkbox(&mut app_temp.view_task_as_markdown, "Markdown")
                 .on_hover_text("View as markdown");
         });
     });
-    if app.temp.view_task_as_markdown {
+    if app_temp.view_task_as_markdown {
         // TODO: We might want a less expensive way to check for changes
-        let prev = task.desc.clone();
-        CommonMarkViewer::new("cm_viewer").show_mut(ui, &mut app.temp.cm_cache, &mut task.desc);
-        if task.desc != prev {
-            app.temp.per_dirty = true;
+        let prev = entry.desc.clone();
+        CommonMarkViewer::new("cm_viewer").show_mut(ui, &mut app_temp.cm_cache, &mut entry.desc);
+        if entry.desc != prev {
+            app_temp.per_dirty = true;
         }
     } else {
-        let te = egui::TextEdit::multiline(&mut task.desc)
+        let te = egui::TextEdit::multiline(&mut entry.desc)
             .code_editor()
             .desired_width(cp_avail_width);
         let re = ui.add(te);
         if re.changed() {
-            app.temp.per_dirty = true;
+            app_temp.per_dirty = true;
         }
     }
-    for attachment in &get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).entries
-        [task_sel]
-        .attachments
-    {
+    for attachment in &entry.attachments {
         ui.horizontal(|ui| {
             ui.label(attachment.filename.display().to_string());
             if ui.button("open").clicked() {
@@ -717,13 +681,10 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
             for path in paths {
                 if let Some(filename) = path.file_name() {
                     let data = std::fs::read(&path).unwrap();
-                    get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel).entries
-                        [task_sel]
-                        .attachments
-                        .push(Attachment {
-                            filename: filename.into(),
-                            data,
-                        })
+                    entry.attachments.push(Attachment {
+                        filename: filename.into(),
+                        data,
+                    })
                 } else {
                     error_msgbox(&format!("Could not determine filename for file {:?}", path));
                 }

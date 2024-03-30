@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 use {
     app::{default_data_file_path, TodoApp},
     eframe::egui::{self, ViewportBuilder, Visuals},
