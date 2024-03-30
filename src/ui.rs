@@ -641,7 +641,12 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
         });
     });
     if app.temp.view_task_as_markdown {
+        // TODO: We might want a less expensive way to check for changes
+        let prev = task.desc.clone();
         CommonMarkViewer::new("cm_viewer").show_mut(ui, &mut app.temp.cm_cache, &mut task.desc);
+        if task.desc != prev {
+            app.temp.per_dirty = true;
+        }
     } else {
         let te = egui::TextEdit::multiline(&mut task.desc)
             .code_editor()
