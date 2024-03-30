@@ -22,6 +22,14 @@ pub struct TodoAppPersistent {
     pub stored_font_data: Option<StoredFontData>,
 }
 
+impl TodoAppPersistent {
+    fn load() -> Result<Self, Box<dyn Error>> {
+        let file = File::open(file_name())?;
+        let dec = zstd::stream::read::Decoder::new(file)?;
+        Ok(rmp_serde::from_read(dec)?)
+    }
+}
+
 pub struct TodoApp {
     pub per: TodoAppPersistent,
     pub temp: TodoAppTemp,
@@ -119,11 +127,8 @@ impl TodoApp {
         }
     }
     pub fn load() -> Result<Self, Box<dyn Error>> {
-        let file = File::open(file_name())?;
-        let dec = zstd::stream::read::Decoder::new(file)?;
-        let per: TodoAppPersistent = rmp_serde::from_read(dec)?;
         Ok(Self {
-            per,
+            per: TodoAppPersistent::load()?,
             temp: TodoAppTemp::new(),
         })
     }
@@ -132,6 +137,12 @@ impl TodoApp {
         let mut enc = zstd::stream::write::Encoder::new(file, zstd::DEFAULT_COMPRESSION_LEVEL)?;
         self.per.serialize(&mut Serializer::new(&mut enc))?;
         enc.finish()?;
+        self.temp.per_dirty = false;
+        Ok(())
+    }
+    pub fn reload_persistent(&mut self) -> Result<(), Box<dyn Error>> {
+        let per = TodoAppPersistent::load()?;
+        self.per = per;
         self.temp.per_dirty = false;
         Ok(())
     }
@@ -156,11 +167,8 @@ impl eframe::App for TodoApp {
             }
         }
         if ctrl && btn_r {
-            match Self::load() {
-                Ok(app) => *self = app,
-                Err(e) => {
-                    eprintln!("Error reloading: {e}");
-                }
+            if let Err(e) = self.reload_persistent() {
+                eprintln!("Error reloading: {e}");
             }
         }
         egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));

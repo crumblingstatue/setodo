@@ -56,9 +56,8 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 )
                                 .clicked()
                             {
-                                match TodoApp::load() {
-                                    Ok(new) => *app = new,
-                                    Err(e) => eprintln!("Reload error: {e}"),
+                                if let Err(e) = app.reload_persistent() {
+                                    eprintln!("Reload error: {e}");
                                 }
                                 ui.close_menu();
                             }
