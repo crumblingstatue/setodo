@@ -1,8 +1,8 @@
 use {
     crate::{
         app::{
-            get_topic_mut, get_topic_mut_or_panic, move_task_into_topic, move_topic, remove_topic,
-            StoredFontData, TodoApp, TodoAppTemp, UiState,
+            get_topic_mut, move_task_into_topic, move_topic, remove_topic, StoredFontData, TodoApp,
+            TodoAppTemp, UiState,
         },
         data::{Attachment, Entry, EntryKind, Topic},
     },
@@ -141,14 +141,20 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         } else {
                             ui.text_edit_singleline(name).request_focus();
                             if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                                let topic = get_topic_mut_or_panic(&mut app.per.topics, parent_idx);
-                                topic.children.push(Topic {
-                                    name: name.take(),
-                                    desc: String::new(),
-                                    entries: Vec::new(),
-                                    task_sel: None,
-                                    children: Vec::new(),
-                                });
+                                match get_topic_mut(&mut app.per.topics, parent_idx) {
+                                    Some(topic) => {
+                                        topic.children.push(Topic {
+                                            name: name.take(),
+                                            desc: String::new(),
+                                            entries: Vec::new(),
+                                            task_sel: None,
+                                            children: Vec::new(),
+                                        });
+                                    }
+                                    None => {
+                                        eprintln!("Error getting topic. Index: {:?}", parent_idx);
+                                    }
+                                }
                                 app.temp.state = UiState::Normal;
                                 // TODO: Do something more reasonable here
                                 app.per.topic_sel.clear();
@@ -234,7 +240,10 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
 fn find_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     let find_str = &app.temp.find_string;
     for matched_topic in collect_matches(&app.per.topics, find_str) {
-        let topic = get_topic_mut_or_panic(&mut app.per.topics, &matched_topic.cursor);
+        let Some(topic) = get_topic_mut(&mut app.per.topics, &matched_topic.cursor) else {
+            ui.label(format!("<error indexing: ({:?}()>", matched_topic.cursor));
+            continue;
+        };
         if ui.link(&topic.name).clicked() {
             app.per.topic_sel = matched_topic.cursor;
             return;

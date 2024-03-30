@@ -208,18 +208,6 @@ pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize])
     insert_topic(topics, dst_idx, topic);
 }
 
-pub fn get_topic_mut_or_panic<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> &'t mut Topic {
-    for i in 0..indices.len() {
-        let idx = indices[i];
-        if i == indices.len() - 1 {
-            return &mut topics[idx];
-        } else {
-            topics = &mut topics[idx].children;
-        }
-    }
-    unreachable!()
-}
-
 pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> Option<&'t mut Topic> {
     for i in 0..indices.len() {
         let idx = *indices.get(i)?;
