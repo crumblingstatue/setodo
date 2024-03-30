@@ -437,7 +437,10 @@ fn tasks_list_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 ui.horizontal(|ui| {
                     match entry.kind {
                         EntryKind::Task => {
-                            ui.checkbox(&mut entry.done, "");
+                            let re = ui.checkbox(&mut entry.done, "");
+                            if re.changed() {
+                                app.temp.per_dirty = true;
+                            }
                         }
                         EntryKind::Info => {
                             ui.label("ℹ");
