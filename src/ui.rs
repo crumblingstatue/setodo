@@ -22,19 +22,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         .show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
-                    ui.scope(|ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(0., 0.);
-                        ui.heading("Topics");
-                        if app.temp.per_dirty {
-                            ui.label(
-                                egui::RichText::new("*")
-                                    .strong()
-                                    .size(20.0)
-                                    .color(egui::Color32::YELLOW),
-                            )
-                            .on_hover_text("There are unsaved changes");
-                        }
-                    });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.menu_button("☰ Menu", |ui| {
                             if ui
@@ -100,14 +87,34 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     find_ui(ui, app);
                     return;
                 }
-                let any_clicked = topics_ui(
-                    &mut app.per.topics,
-                    &mut Vec::new(),
-                    &mut app.per.topic_sel,
-                    ui,
-                    &mut app.temp.state,
-                    &mut app.temp.per_dirty,
-                );
+                let root_label_text = if app.temp.per_dirty {
+                    egui::RichText::new("Topics*").color(egui::Color32::YELLOW)
+                } else {
+                    egui::RichText::new("Topics")
+                };
+                let mut re = ui.selectable_label(app.per.topic_sel.is_empty(), root_label_text);
+                if app.temp.per_dirty {
+                    re = re.on_hover_ui(|ui| {
+                        ui.label(
+                            egui::RichText::new("There are unsaved changes")
+                                .color(egui::Color32::YELLOW),
+                        );
+                    });
+                }
+                if re.clicked() {
+                    app.per.topic_sel.clear();
+                }
+                let mut any_clicked = false;
+                ui.indent("root_indent", |ui| {
+                    any_clicked = topics_ui(
+                        &mut app.per.topics,
+                        &mut Vec::new(),
+                        &mut app.per.topic_sel,
+                        ui,
+                        &mut app.temp.state,
+                        &mut app.temp.per_dirty,
+                    );
+                });
                 ui.horizontal(|ui| match &mut app.temp.state {
                     UiState::AddTopic(name) => {
                         let clicked = ui.button(ph::CHECK_FAT).clicked();
@@ -458,6 +465,8 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     ui.separator();
                     task_ui(en, &mut app.temp, ui, cp_avail_width);
                 }
+            } else {
+                ui.heading("Select a topic on the left, or create one!");
             }
         });
     });
