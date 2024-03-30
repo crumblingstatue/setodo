@@ -390,7 +390,13 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         let cp_avail_width = ui.available_width();
         ui.vertical(|ui| {
             if !app.per.topic_sel.is_empty() {
-                let topic = get_topic_mut_or_panic(&mut app.per.topics, &app.per.topic_sel);
+                let Some(topic) = get_topic_mut(&mut app.per.topics, &app.per.topic_sel) else {
+                    ui.label(format!(
+                        "<error getting topic. index: {:?}>",
+                        app.per.topic_sel
+                    ));
+                    return;
+                };
                 ui.horizontal(|ui| {
                     ui.heading(&topic.name);
                     ui.with_layout(
