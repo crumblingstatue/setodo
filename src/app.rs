@@ -191,9 +191,16 @@ impl eframe::App for TodoApp {
     }
 }
 
-pub fn move_task_into_topic(topics: &mut [Topic], task: Entry, topic_sel: &[usize]) {
-    let topic = get_topic_mut(topics, topic_sel);
+pub fn move_task_into_topic(
+    topics: &mut [Topic],
+    task: Entry,
+    topic_sel: &[usize],
+) -> Result<(), ()> {
+    let Some(topic) = get_topic_mut(topics, topic_sel) else {
+        return Err(());
+    };
     topic.entries.push(task);
+    Ok(())
 }
 
 pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize]) {
@@ -201,7 +208,7 @@ pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize])
     insert_topic(topics, dst_idx, topic);
 }
 
-pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> &'t mut Topic {
+pub fn get_topic_mut_or_panic<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> &'t mut Topic {
     for i in 0..indices.len() {
         let idx = indices[i];
         if i == indices.len() - 1 {
@@ -211,6 +218,18 @@ pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> &'t 
         }
     }
     unreachable!()
+}
+
+pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> Option<&'t mut Topic> {
+    for i in 0..indices.len() {
+        let idx = *indices.get(i)?;
+        if i == indices.len() - 1 {
+            return topics.get_mut(idx);
+        } else {
+            topics = &mut topics.get_mut(idx)?.children;
+        }
+    }
+    None
 }
 
 pub fn remove_topic(mut topics: &mut Vec<Topic>, indices: &[usize]) -> Topic {
