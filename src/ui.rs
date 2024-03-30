@@ -24,9 +24,37 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 ui.horizontal(|ui| {
                     ui.heading("Topics");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button(cc!(ph::DOOR_OPEN, " Quit")).clicked() {
-                            ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-                        }
+                        ui.menu_button("☰ Menu", |ui| {
+                            if ui
+                                .add_enabled(app.temp.per_dirty, egui::Button::new("💾 Save"))
+                                .clicked()
+                            {
+                                if let Err(e) = app.save_persistent() {
+                                    eprintln!("Error when saving: {e}");
+                                }
+                                ui.close_menu();
+                            }
+                            if ui
+                                .add_enabled(app.temp.per_dirty, egui::Button::new("⟲ Reload"))
+                                .clicked()
+                            {
+                                match TodoApp::load() {
+                                    Ok(new) => *app = new,
+                                    Err(e) => eprintln!("Reload error: {e}"),
+                                }
+                                ui.close_menu();
+                            }
+                            ui.separator();
+                            if ui.button("🗛 Font config").clicked() {
+                                app.temp.state = UiState::FontCfg;
+                                ui.close_menu();
+                            }
+                            ui.separator();
+                            if ui.button(cc!(ph::DOOR_OPEN, " Save & Quit")).clicked() {
+                                ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+                                ui.close_menu();
+                            }
+                        });
                         if ui.button("👁 Hide").on_hover_text("Hotkey: Esc").clicked() {
                             ui.ctx()
                                 .send_viewport_cmd(egui::ViewportCommand::Visible(false));
@@ -173,34 +201,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 }
                             }
                         });
-                    }
-                });
-                ui.horizontal(|ui| {
-                    if ui
-                        .add_enabled(
-                            !matches!(app.temp.state, UiState::FontCfg),
-                            egui::Link::new("Font config"),
-                        )
-                        .clicked()
-                    {
-                        app.temp.state = UiState::FontCfg;
-                    }
-                    if ui
-                        .add_enabled(app.temp.per_dirty, egui::Button::new("💾 Save"))
-                        .clicked()
-                    {
-                        if let Err(e) = app.save_persistent() {
-                            eprintln!("Error when saving: {e}");
-                        }
-                    }
-                    if ui
-                        .add_enabled(app.temp.per_dirty, egui::Button::new("⟲ Reload"))
-                        .clicked()
-                    {
-                        match TodoApp::load() {
-                            Ok(new) => *app = new,
-                            Err(e) => eprintln!("Reload error: {e}"),
-                        }
                     }
                 });
             });
