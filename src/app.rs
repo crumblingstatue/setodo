@@ -11,7 +11,12 @@ use {
     egui_fontcfg::{CustomFontPaths, FontCfgUi},
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
-    std::{collections::BTreeMap, error::Error, fs::File, path::PathBuf},
+    std::{
+        collections::BTreeMap,
+        error::Error,
+        fs::File,
+        path::{Path, PathBuf},
+    },
 };
 
 #[derive(Default, Serialize, Deserialize)]
@@ -23,8 +28,8 @@ pub struct TodoAppPersistent {
 }
 
 impl TodoAppPersistent {
-    fn load() -> Result<Self, Box<dyn Error>> {
-        let file = File::open(file_name())?;
+    fn load(data_file_path: &Path) -> Result<Self, Box<dyn Error>> {
+        let file = File::open(data_file_path)?;
         let dec = zstd::stream::read::Decoder::new(file)?;
         Ok(rmp_serde::from_read(dec)?)
     }
@@ -56,10 +61,12 @@ pub struct TodoAppTemp {
     pub esc_was_used: bool,
     /// The persistent data has been modified since the last save
     pub per_dirty: bool,
+    /// Path to the data file we're reading from / writing to
+    pub data_file_path: PathBuf,
 }
 
 impl TodoAppTemp {
-    fn new() -> Self {
+    fn new(data_file_path: PathBuf) -> Self {
         Self {
             state: UiState::Normal,
             font_defs_ui: Default::default(),
@@ -70,6 +77,7 @@ impl TodoAppTemp {
             find_string: String::new(),
             esc_was_used: false,
             per_dirty: false,
+            data_file_path,
         }
     }
 }
@@ -115,25 +123,25 @@ impl UiState {
     }
 }
 
-fn file_name() -> PathBuf {
+pub fn default_data_file_path() -> PathBuf {
     dirs::home_dir().unwrap().join(".setodo.dat")
 }
 
 impl TodoApp {
-    pub fn new() -> Self {
+    pub fn new(data_file_path: PathBuf) -> Self {
         Self {
             per: TodoAppPersistent::default(),
-            temp: TodoAppTemp::new(),
+            temp: TodoAppTemp::new(data_file_path),
         }
     }
-    pub fn load() -> Result<Self, Box<dyn Error>> {
+    pub fn load(data_file_path: PathBuf) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
-            per: TodoAppPersistent::load()?,
-            temp: TodoAppTemp::new(),
+            per: TodoAppPersistent::load(&data_file_path)?,
+            temp: TodoAppTemp::new(data_file_path),
         })
     }
     pub fn save_persistent(&mut self) -> Result<(), Box<dyn Error>> {
-        let file = File::create(file_name())?;
+        let file = File::create(&self.temp.data_file_path)?;
         let mut enc = zstd::stream::write::Encoder::new(file, zstd::DEFAULT_COMPRESSION_LEVEL)?;
         self.per.serialize(&mut Serializer::new(&mut enc))?;
         enc.finish()?;
@@ -141,7 +149,7 @@ impl TodoApp {
         Ok(())
     }
     pub fn reload_persistent(&mut self) -> Result<(), Box<dyn Error>> {
-        let per = TodoAppPersistent::load()?;
+        let per = TodoAppPersistent::load(&self.temp.data_file_path)?;
         self.per = per;
         self.temp.per_dirty = false;
         Ok(())
@@ -150,7 +158,7 @@ impl TodoApp {
 
 impl eframe::App for TodoApp {
     fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>) {
-        TodoApp::save_persistent(self).unwrap();
+        self.save_persistent().unwrap();
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {

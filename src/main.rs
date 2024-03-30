@@ -1,8 +1,8 @@
 use {
-    app::TodoApp,
+    app::{default_data_file_path, TodoApp},
     eframe::egui::{self, ViewportBuilder, Visuals},
     existing_instance::Endpoint,
-    std::time::Duration,
+    std::{path::PathBuf, time::Duration},
 };
 
 mod app;
@@ -20,6 +20,32 @@ fn main() {
         viewport: ViewportBuilder::default().with_inner_size(egui::vec2(620., 480.)),
         ..Default::default()
     };
+    argwerk::define! {
+        #[usage = "setodo [options...]"]
+        struct Args {
+            help: bool,
+            datafile_path: PathBuf = default_data_file_path(),
+        }
+        /// Use a custom data file instead of default (~/.setodo.dat)
+        ["-f" | "--file", #[os] path] => {
+            datafile_path = path.into();
+        }
+        /// Print this help.
+        ["-h" | "--help"] => {
+            println!("{}", HELP);
+            help = true;
+        }
+    }
+    let args = match Args::args() {
+        Ok(args) => args,
+        Err(e) => {
+            eprintln!("{e}");
+            return;
+        }
+    };
+    if args.help {
+        return;
+    }
     eframe::run_native(
         "Simple egui todo",
         native_options,
@@ -33,11 +59,11 @@ fn main() {
                 std::thread::sleep(Duration::from_millis(250));
             });
             c_ctx.egui_ctx.set_visuals(Visuals::dark());
-            let mut app = match TodoApp::load() {
+            let mut app = match TodoApp::load(args.datafile_path.clone()) {
                 Ok(app) => app,
                 Err(e) => {
                     eprintln!("{:?}", e);
-                    TodoApp::new()
+                    TodoApp::new(args.datafile_path)
                 }
             };
             let mut fonts = egui::FontDefinitions::default();

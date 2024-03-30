@@ -107,6 +107,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "argwerk"
+version = "0.20.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3d1372f0ab9e3cf157e61da27ef17af8d98617fc556373d1d08662f99ae996c"
+
+[[package]]
 name = "arrayvec"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1985,6 +1991,7 @@ dependencies = [
 name = "setodo"
 version = "0.1.0"
 dependencies = [
+ "argwerk",
  "constcat",
  "dirs",
  "eframe",

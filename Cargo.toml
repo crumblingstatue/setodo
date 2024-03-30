@@ -16,6 +16,7 @@ egui-phosphor = { git = "https://github.com/hacknus/egui-phosphor.git" } # https
 egui-fontcfg = { git = "https://github.com/crumblingstatue/egui-fontcfg.git" }
 existing_instance = { git = "https://github.com/crumblingstatue/rust-existing-instance.git" }
 constcat = "0.5.0"
+argwerk = "0.20.4"
 
 [dependencies.serde]
 version = "1.0.195"
