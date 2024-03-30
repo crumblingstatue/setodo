@@ -38,7 +38,10 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.menu_button("☰ Menu", |ui| {
                             if ui
-                                .add_enabled(app.temp.per_dirty, egui::Button::new("💾 Save"))
+                                .add_enabled(
+                                    app.temp.per_dirty,
+                                    egui::Button::new("💾 Save").shortcut_text("Ctrl+S"),
+                                )
                                 .clicked()
                             {
                                 if let Err(e) = app.save_persistent() {
@@ -47,7 +50,10 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 ui.close_menu();
                             }
                             if ui
-                                .add_enabled(app.temp.per_dirty, egui::Button::new("⟲ Reload"))
+                                .add_enabled(
+                                    app.temp.per_dirty,
+                                    egui::Button::new("⟲ Reload").shortcut_text("Ctrl+R"),
+                                )
                                 .clicked()
                             {
                                 match TodoApp::load() {

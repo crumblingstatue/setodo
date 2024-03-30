@@ -143,6 +143,26 @@ impl eframe::App for TodoApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+        let (ctrl, btn_r, btn_s) = ctx.input(|inp| {
+            (
+                inp.modifiers.ctrl,
+                inp.key_pressed(egui::Key::R),
+                inp.key_pressed(egui::Key::S),
+            )
+        });
+        if ctrl && btn_s {
+            if let Err(e) = self.save_persistent() {
+                eprintln!("Error when saving: {e}");
+            }
+        }
+        if ctrl && btn_r {
+            match Self::load() {
+                Ok(app) => *self = app,
+                Err(e) => {
+                    eprintln!("Error reloading: {e}");
+                }
+            }
+        }
         egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
         if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) && !self.temp.esc_was_used {
