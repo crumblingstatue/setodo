@@ -83,9 +83,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             egui::TextEdit::singleline(&mut app.temp.find_string)
                                 .hint_text("🔍 Find (ctrl+F)"),
                         );
-                        if re.changed() {
-                            app.temp.per_dirty = true;
-                        }
                         if ui.input(|inp| inp.modifiers.ctrl && inp.key_pressed(egui::Key::F)) {
                             re.request_focus();
                         }
