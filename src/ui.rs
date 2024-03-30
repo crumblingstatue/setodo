@@ -116,29 +116,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     );
                 });
                 ui.horizontal(|ui| match &mut app.temp.state {
-                    UiState::AddTopic(name) => {
-                        let clicked = ui.button(ph::CHECK_FAT).clicked();
-                        if ui.button(ph::X_CIRCLE).clicked()
-                            || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
-                        {
-                            app.temp.state = UiState::Normal;
-                        } else {
-                            ui.text_edit_singleline(name).request_focus();
-                            if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                                app.per.topics.push(Topic {
-                                    name: name.take(),
-                                    desc: String::new(),
-                                    entries: Vec::new(),
-                                    task_sel: None,
-                                    children: Vec::new(),
-                                });
-                                app.temp.state = UiState::Normal;
-                                // TODO: Do something more reasonable here
-                                app.per.topic_sel.clear();
-                                app.temp.per_dirty = true;
-                            }
-                        }
-                    }
                     UiState::AddSubtopic { name, parent_idx } => {
                         let clicked = ui.button(ph::CHECK_FAT).clicked();
                         if ui.button(ph::X_CIRCLE).clicked()
@@ -148,20 +125,18 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         } else {
                             ui.text_edit_singleline(name).request_focus();
                             if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                                match get_topic_mut(&mut app.per.topics, parent_idx) {
-                                    Some(topic) => {
-                                        topic.children.push(Topic {
-                                            name: name.take(),
-                                            desc: String::new(),
-                                            entries: Vec::new(),
-                                            task_sel: None,
-                                            children: Vec::new(),
-                                        });
-                                    }
-                                    None => {
-                                        eprintln!("Error getting topic. Index: {:?}", parent_idx);
-                                    }
-                                }
+                                let topic_list =
+                                    match get_topic_mut(&mut app.per.topics, parent_idx) {
+                                        Some(topic) => &mut topic.children,
+                                        None => &mut app.per.topics,
+                                    };
+                                topic_list.push(Topic {
+                                    name: name.take(),
+                                    desc: String::new(),
+                                    entries: Vec::new(),
+                                    task_sel: None,
+                                    children: Vec::new(),
+                                });
                                 app.temp.state = UiState::Normal;
                                 // TODO: Do something more reasonable here
                                 app.per.topic_sel.clear();
@@ -192,8 +167,12 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     }
                     _ => {
                         ui.horizontal(|ui| {
-                            if ui.button(ph::FILE_PLUS).clicked() {
-                                app.temp.state = UiState::add_topic();
+                            if ui
+                                .button(ph::FILE_PLUS)
+                                .on_hover_text("New topic")
+                                .clicked()
+                            {
+                                app.temp.state = UiState::add_subtopic(app.per.topic_sel.clone());
                             }
                             if ui
                                 .add_enabled(
@@ -235,10 +214,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 {
                                     topics.swap(*last, *last + 1);
                                     *last += 1;
-                                }
-                                if ui.button("Add subtopic").clicked() {
-                                    app.temp.state =
-                                        UiState::add_subtopic(app.per.topic_sel.clone());
                                 }
                                 if ui.button("Move topic into").clicked() {
                                     app.temp.state =

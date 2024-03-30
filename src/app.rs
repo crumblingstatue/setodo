@@ -84,7 +84,6 @@ impl TodoAppTemp {
 
 pub enum UiState {
     Normal,
-    AddTopic(String),
     AddSubtopic {
         name: String,
         parent_idx: Vec<usize>,
@@ -106,9 +105,6 @@ pub enum UiState {
 }
 
 impl UiState {
-    pub fn add_topic() -> Self {
-        Self::AddTopic(String::default())
-    }
     pub fn add_subtopic(parent_idx: Vec<usize>) -> Self {
         Self::AddSubtopic {
             name: String::default(),
