@@ -46,6 +46,8 @@ pub struct TodoAppTemp {
     pub find_string: String,
     /// If true, pressing Esc won't hide the window like it usually does
     pub esc_was_used: bool,
+    /// The persistent data has been modified since the last save
+    pub per_dirty: bool,
 }
 
 impl TodoAppTemp {
@@ -59,6 +61,7 @@ impl TodoAppTemp {
             view_task_as_markdown: false,
             find_string: String::new(),
             esc_was_used: false,
+            per_dirty: false,
         }
     }
 }
@@ -124,18 +127,19 @@ impl TodoApp {
             temp: TodoAppTemp::new(),
         })
     }
-    fn save(&self) -> Result<(), Box<dyn Error>> {
+    pub fn save_persistent(&mut self) -> Result<(), Box<dyn Error>> {
         let file = File::create(file_name())?;
         let mut enc = zstd::stream::write::Encoder::new(file, zstd::DEFAULT_COMPRESSION_LEVEL)?;
         self.per.serialize(&mut Serializer::new(&mut enc))?;
         enc.finish()?;
+        self.temp.per_dirty = false;
         Ok(())
     }
 }
 
 impl eframe::App for TodoApp {
     fn on_exit(&mut self, _ctx: Option<&eframe::glow::Context>) {
-        TodoApp::save(self).unwrap();
+        TodoApp::save_persistent(self).unwrap();
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {

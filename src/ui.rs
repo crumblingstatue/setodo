@@ -35,6 +35,9 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             egui::TextEdit::singleline(&mut app.temp.find_string)
                                 .hint_text("🔍 Find (ctrl+F)"),
                         );
+                        if re.changed() {
+                            app.temp.per_dirty = true;
+                        }
                         if ui.input(|inp| inp.modifiers.ctrl && inp.key_pressed(egui::Key::F)) {
                             re.request_focus();
                         }
@@ -54,6 +57,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     &mut app.per.topic_sel,
                     ui,
                     &mut app.temp.state,
+                    &mut app.temp.per_dirty,
                 );
                 ui.horizontal(|ui| match &mut app.temp.state {
                     UiState::AddTopic(name) => {
@@ -75,6 +79,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 app.temp.state = UiState::Normal;
                                 // TODO: Do something more reasonable here
                                 app.per.topic_sel.clear();
+                                app.temp.per_dirty = true;
                             }
                         }
                     }
@@ -98,6 +103,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 app.temp.state = UiState::Normal;
                                 // TODO: Do something more reasonable here
                                 app.per.topic_sel.clear();
+                                app.temp.per_dirty = true;
                             }
                         }
                     }
@@ -169,15 +175,34 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         });
                     }
                 });
-                if ui
-                    .add_enabled(
-                        !matches!(app.temp.state, UiState::FontCfg),
-                        egui::Link::new("Font config"),
-                    )
-                    .clicked()
-                {
-                    app.temp.state = UiState::FontCfg;
-                }
+                ui.horizontal(|ui| {
+                    if ui
+                        .add_enabled(
+                            !matches!(app.temp.state, UiState::FontCfg),
+                            egui::Link::new("Font config"),
+                        )
+                        .clicked()
+                    {
+                        app.temp.state = UiState::FontCfg;
+                    }
+                    if ui
+                        .add_enabled(app.temp.per_dirty, egui::Button::new("💾 Save"))
+                        .clicked()
+                    {
+                        if let Err(e) = app.save_persistent() {
+                            eprintln!("Error when saving: {e}");
+                        }
+                    }
+                    if ui
+                        .add_enabled(app.temp.per_dirty, egui::Button::new("⟲ Reload"))
+                        .clicked()
+                    {
+                        match TodoApp::load() {
+                            Ok(new) => *app = new,
+                            Err(e) => eprintln!("Reload error: {e}"),
+                        }
+                    }
+                });
             });
         });
 }
@@ -256,6 +281,7 @@ fn topics_ui(
     topic_sel: &mut Vec<usize>,
     ui: &mut egui::Ui,
     state: &mut UiState,
+    per_dirty: &mut bool,
 ) -> bool {
     let mut any_clicked = false;
     cursor.push(0);
@@ -263,8 +289,12 @@ fn topics_ui(
         *cursor.last_mut().unwrap() = i;
         match state {
             UiState::RenameTopic { idx } if idx == cursor => {
-                if ui.text_edit_singleline(&mut topic.name).lost_focus() {
+                let re = ui.text_edit_singleline(&mut topic.name);
+                if re.lost_focus() {
                     *state = UiState::Normal;
+                }
+                if re.changed() {
+                    *per_dirty = true;
                 }
             }
             _ => {
@@ -295,8 +325,14 @@ fn topics_ui(
                             }
                         })
                         .body(|ui| {
-                            any_clicked |=
-                                topics_ui(&mut topic.children, cursor, topic_sel, ui, state);
+                            any_clicked |= topics_ui(
+                                &mut topic.children,
+                                cursor,
+                                topic_sel,
+                                ui,
+                                state,
+                                per_dirty,
+                            );
                         });
                 }
             }
@@ -583,7 +619,10 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
         let te = egui::TextEdit::multiline(&mut task.desc)
             .code_editor()
             .desired_width(cp_avail_width);
-        ui.add(te);
+        let re = ui.add(te);
+        if re.changed() {
+            app.temp.per_dirty = true;
+        }
     }
     for attachment in
         &get_topic_mut(&mut app.per.topics, &app.per.topic_sel).entries[task_sel].attachments
