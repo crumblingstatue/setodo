@@ -22,7 +22,19 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         .show(ui, |ui| {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| {
-                    ui.heading("Topics");
+                    ui.scope(|ui| {
+                        ui.spacing_mut().item_spacing = egui::vec2(0., 0.);
+                        ui.heading("Topics");
+                        if app.temp.per_dirty {
+                            ui.label(
+                                egui::RichText::new("*")
+                                    .strong()
+                                    .size(20.0)
+                                    .color(egui::Color32::YELLOW),
+                            )
+                            .on_hover_text("There are unsaved changes");
+                        }
+                    });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.menu_button("☰ Menu", |ui| {
                             if ui
