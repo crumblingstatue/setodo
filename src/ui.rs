@@ -634,7 +634,8 @@ fn task_ui(app: &mut TodoApp, task_sel: usize, ui: &mut egui::Ui, cp_avail_width
     ui.horizontal(|ui| {
         ui.heading(&task.title);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.checkbox(&mut app.temp.view_task_as_markdown, "Markdown view");
+            ui.checkbox(&mut app.temp.view_task_as_markdown, "Markdown")
+                .on_hover_text("View as markdown");
         });
     });
     if app.temp.view_task_as_markdown {
