@@ -419,7 +419,9 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         ui.text_edit_multiline(&mut topic.desc);
                     }
                     _ => {
-                        ui.label(&topic.desc);
+                        if !topic.desc.is_empty() {
+                            ui.label(&topic.desc);
+                        }
                     }
                 }
                 ui.separator();
