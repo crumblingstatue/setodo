@@ -16,73 +16,15 @@ use {
 };
 
 pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
-    let esc_pressed = ui.input(|inp| inp.key_pressed(egui::Key::Escape));
+    tree_view_top_bar(ui, app);
+    ui.separator();
+    let mut any_clicked = false;
     ScrollArea::vertical()
+        .max_height(ui.available_height() - 36.0)
+        .auto_shrink(false)
         .id_source("topics_scroll")
         .show(ui, |ui| {
             ui.vertical(|ui| {
-                ui.horizontal(|ui| {
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.menu_button("☰ Menu", |ui| {
-                            if ui
-                                .add_enabled(
-                                    app.temp.per_dirty,
-                                    egui::Button::new("💾 Save").shortcut_text("Ctrl+S"),
-                                )
-                                .clicked()
-                            {
-                                if let Err(e) = app.save_persistent() {
-                                    eprintln!("Error when saving: {e}");
-                                }
-                                ui.close_menu();
-                            }
-                            if ui
-                                .add_enabled(
-                                    app.temp.per_dirty,
-                                    egui::Button::new("⟲ Reload").shortcut_text("Ctrl+R"),
-                                )
-                                .clicked()
-                            {
-                                if let Err(e) = app.reload_persistent() {
-                                    eprintln!("Reload error: {e}");
-                                }
-                                ui.close_menu();
-                            }
-                            ui.separator();
-                            if ui.button("🗛 Font config").clicked() {
-                                app.temp.state = UiState::FontCfg;
-                                ui.close_menu();
-                            }
-                            ui.separator();
-                            if ui.button(cc!(ph::DOOR_OPEN, " Save & Quit")).clicked() {
-                                ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-                                ui.close_menu();
-                            }
-                        });
-                        if ui
-                            .button("👁 Hide")
-                            .on_hover_text("Hotkey: Esc\nAlso autosaves.")
-                            .clicked()
-                        {
-                            ui.ctx()
-                                .send_viewport_cmd(egui::ViewportCommand::Visible(false));
-                            if let Err(e) = app.save_persistent() {
-                                eprintln!("Autosave error: {e}");
-                            }
-                        };
-                        let re = ui.add(
-                            egui::TextEdit::singleline(&mut app.temp.find_string)
-                                .hint_text("🔍 Find (ctrl+F)"),
-                        );
-                        if ui.input(|inp| inp.modifiers.ctrl && inp.key_pressed(egui::Key::F)) {
-                            re.request_focus();
-                        }
-                        if !app.temp.find_string.is_empty() && esc_pressed {
-                            app.temp.esc_was_used = true;
-                            app.temp.find_string.clear();
-                        }
-                    });
-                });
                 if !app.temp.find_string.is_empty() {
                     find_ui(ui, app);
                     return;
@@ -101,7 +43,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         );
                     });
                 }
-                let mut any_clicked = false;
                 if re.clicked() {
                     any_clicked = true;
                     app.per.topic_sel.clear();
@@ -116,116 +57,181 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         &mut app.temp.per_dirty,
                     );
                 });
-                ui.horizontal(|ui| match &mut app.temp.state {
-                    UiState::AddSubtopic { name, parent_idx } => {
-                        let clicked = ui.button(ph::CHECK_FAT).clicked();
-                        if ui.button(ph::X_CIRCLE).clicked()
-                            || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
-                        {
-                            app.temp.state = UiState::Normal;
-                        } else {
-                            ui.text_edit_singleline(name).request_focus();
-                            if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                                let topic_list =
-                                    match get_topic_mut(&mut app.per.topics, parent_idx) {
-                                        Some(topic) => &mut topic.children,
-                                        None => &mut app.per.topics,
-                                    };
-                                topic_list.push(Topic {
-                                    name: name.take(),
-                                    desc: String::new(),
-                                    entries: Vec::new(),
-                                    task_sel: None,
-                                    children: Vec::new(),
-                                });
-                                app.temp.state = UiState::Normal;
-                                // TODO: Do something more reasonable here
-                                app.per.topic_sel.clear();
-                                app.temp.per_dirty = true;
-                            }
-                        }
-                    }
-                    UiState::MoveTopicInto { src_idx } => {
-                        ui.label("Click on topic to move into!");
-                        ui.label(any_clicked.to_string());
-                        if any_clicked {
-                            move_topic(&mut app.per.topics, src_idx, &app.per.topic_sel);
-                            app.temp.state = UiState::Normal;
-                        }
-                    }
-                    UiState::MoveTaskIntoTopic(task) => {
-                        if any_clicked {
-                            let result = move_task_into_topic(
-                                &mut app.per.topics,
-                                std::mem::take(task),
-                                &app.per.topic_sel,
-                            );
-                            match result {
-                                Ok(()) => app.temp.state = UiState::Normal,
-                                Err(()) => eprintln!("Failed to move task into topic"),
-                            }
-                        }
-                    }
-                    _ => {
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button(ph::FILE_PLUS)
-                                .on_hover_text("New topic")
-                                .clicked()
-                            {
-                                app.temp.state = UiState::add_subtopic(app.per.topic_sel.clone());
-                            }
-                            if ui
-                                .add_enabled(
-                                    !app.per.topic_sel.is_empty(),
-                                    egui::Button::new(ph::TRASH),
-                                )
-                                .clicked()
-                                && !app.per.topic_sel.is_empty()
-                            {
-                                remove_topic(&mut app.per.topics, &app.per.topic_sel);
-                                // TODO: Do something more reasonable
-                                app.per.topic_sel.clear();
-                            }
-                            if let Some((last, first_chunk)) = app.per.topic_sel.split_last_mut() {
-                                let topics = if first_chunk.is_empty() {
-                                    &mut app.per.topics
-                                } else {
-                                    match get_topic_mut(&mut app.per.topics, first_chunk) {
-                                        Some(topic) => &mut topic.children,
-                                        None => {
-                                            ui.label("TODO: Bug (probably)");
-                                            return;
-                                        }
-                                    }
-                                };
-                                if ui
-                                    .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
-                                    .clicked()
-                                {
-                                    topics.swap(*last, *last - 1);
-                                    *last -= 1;
-                                }
-                                if ui
-                                    .add_enabled(
-                                        *last < topics.len() - 1,
-                                        egui::Button::new(ph::ARROW_FAT_DOWN),
-                                    )
-                                    .clicked()
-                                {
-                                    topics.swap(*last, *last + 1);
-                                    *last += 1;
-                                }
-                                if ui.button("Move topic into").clicked() {
-                                    app.temp.state =
-                                        UiState::move_topic_into(app.per.topic_sel.clone());
-                                }
-                            }
-                        });
-                    }
-                });
             });
         });
+    ui.separator();
+    tree_view_bottom_bar(ui, app, any_clicked);
+}
+
+fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool) {
+    ui.horizontal(|ui| match &mut app.temp.state {
+        UiState::AddSubtopic { name, parent_idx } => {
+            let clicked = ui.button(ph::CHECK_FAT).clicked();
+            if ui.button(ph::X_CIRCLE).clicked()
+                || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
+            {
+                app.temp.state = UiState::Normal;
+            } else {
+                ui.text_edit_singleline(name).request_focus();
+                if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
+                    let topic_list = match get_topic_mut(&mut app.per.topics, parent_idx) {
+                        Some(topic) => &mut topic.children,
+                        None => &mut app.per.topics,
+                    };
+                    topic_list.push(Topic {
+                        name: name.take(),
+                        desc: String::new(),
+                        entries: Vec::new(),
+                        task_sel: None,
+                        children: Vec::new(),
+                    });
+                    app.temp.state = UiState::Normal;
+                    // TODO: Do something more reasonable here
+                    app.per.topic_sel.clear();
+                    app.temp.per_dirty = true;
+                }
+            }
+        }
+        UiState::MoveTopicInto { src_idx } => {
+            ui.label("Click on topic to move into!");
+            ui.label(any_clicked.to_string());
+            if any_clicked {
+                move_topic(&mut app.per.topics, src_idx, &app.per.topic_sel);
+                app.temp.state = UiState::Normal;
+            }
+        }
+        UiState::MoveTaskIntoTopic(task) => {
+            if any_clicked {
+                let result = move_task_into_topic(
+                    &mut app.per.topics,
+                    std::mem::take(task),
+                    &app.per.topic_sel,
+                );
+                match result {
+                    Ok(()) => app.temp.state = UiState::Normal,
+                    Err(()) => eprintln!("Failed to move task into topic"),
+                }
+            }
+        }
+        _ => {
+            ui.horizontal(|ui| {
+                if ui
+                    .button(ph::FILE_PLUS)
+                    .on_hover_text("New topic")
+                    .clicked()
+                {
+                    app.temp.state = UiState::add_subtopic(app.per.topic_sel.clone());
+                }
+                if ui
+                    .add_enabled(!app.per.topic_sel.is_empty(), egui::Button::new(ph::TRASH))
+                    .clicked()
+                    && !app.per.topic_sel.is_empty()
+                {
+                    remove_topic(&mut app.per.topics, &app.per.topic_sel);
+                    // TODO: Do something more reasonable
+                    app.per.topic_sel.clear();
+                }
+                if let Some((last, first_chunk)) = app.per.topic_sel.split_last_mut() {
+                    let topics = if first_chunk.is_empty() {
+                        &mut app.per.topics
+                    } else {
+                        match get_topic_mut(&mut app.per.topics, first_chunk) {
+                            Some(topic) => &mut topic.children,
+                            None => {
+                                ui.label("TODO: Bug (probably)");
+                                return;
+                            }
+                        }
+                    };
+                    if ui
+                        .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
+                        .clicked()
+                    {
+                        topics.swap(*last, *last - 1);
+                        *last -= 1;
+                    }
+                    if ui
+                        .add_enabled(
+                            *last < topics.len() - 1,
+                            egui::Button::new(ph::ARROW_FAT_DOWN),
+                        )
+                        .clicked()
+                    {
+                        topics.swap(*last, *last + 1);
+                        *last += 1;
+                    }
+                    if ui.button("Move topic into").clicked() {
+                        app.temp.state = UiState::move_topic_into(app.per.topic_sel.clone());
+                    }
+                }
+            });
+        }
+    });
+}
+
+fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
+    let esc_pressed = ui.input(|inp| inp.key_pressed(egui::Key::Escape));
+    ui.horizontal(|ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.menu_button("☰ Menu", |ui| {
+                if ui
+                    .add_enabled(
+                        app.temp.per_dirty,
+                        egui::Button::new("💾 Save").shortcut_text("Ctrl+S"),
+                    )
+                    .clicked()
+                {
+                    if let Err(e) = app.save_persistent() {
+                        eprintln!("Error when saving: {e}");
+                    }
+                    ui.close_menu();
+                }
+                if ui
+                    .add_enabled(
+                        app.temp.per_dirty,
+                        egui::Button::new("⟲ Reload").shortcut_text("Ctrl+R"),
+                    )
+                    .clicked()
+                {
+                    if let Err(e) = app.reload_persistent() {
+                        eprintln!("Reload error: {e}");
+                    }
+                    ui.close_menu();
+                }
+                ui.separator();
+                if ui.button("🗛 Font config").clicked() {
+                    app.temp.state = UiState::FontCfg;
+                    ui.close_menu();
+                }
+                ui.separator();
+                if ui.button(cc!(ph::DOOR_OPEN, " Save & Quit")).clicked() {
+                    ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+                    ui.close_menu();
+                }
+            });
+            if ui
+                .button("👁 Hide")
+                .on_hover_text("Hotkey: Esc\nAlso autosaves.")
+                .clicked()
+            {
+                ui.ctx()
+                    .send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                if let Err(e) = app.save_persistent() {
+                    eprintln!("Autosave error: {e}");
+                }
+            };
+            let re = ui.add(
+                egui::TextEdit::singleline(&mut app.temp.find_string).hint_text("🔍 Find (ctrl+F)"),
+            );
+            if ui.input(|inp| inp.modifiers.ctrl && inp.key_pressed(egui::Key::F)) {
+                re.request_focus();
+            }
+            if !app.temp.find_string.is_empty() && esc_pressed {
+                app.temp.esc_was_used = true;
+                app.temp.find_string.clear();
+            }
+        });
+    });
 }
 
 fn find_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
