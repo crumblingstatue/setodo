@@ -101,12 +101,13 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         );
                     });
                 }
+                let mut any_clicked = false;
                 if re.clicked() {
+                    any_clicked = true;
                     app.per.topic_sel.clear();
                 }
-                let mut any_clicked = false;
                 ui.indent("root_indent", |ui| {
-                    any_clicked = topics_ui(
+                    any_clicked |= topics_ui(
                         &mut app.per.topics,
                         &mut Vec::new(),
                         &mut app.per.topic_sel,

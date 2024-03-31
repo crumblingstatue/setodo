@@ -200,8 +200,9 @@ pub fn move_task_into_topic(
 }
 
 pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize]) {
-    let topic = remove_topic(topics, src_idx);
-    insert_topic(topics, dst_idx, topic);
+    if let Some(topic) = remove_topic(topics, src_idx) {
+        insert_topic(topics, dst_idx, topic);
+    }
 }
 
 pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> Option<&'t mut Topic> {
@@ -216,26 +217,27 @@ pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> Opti
     None
 }
 
-pub fn remove_topic(mut topics: &mut Vec<Topic>, indices: &[usize]) -> Topic {
+pub fn remove_topic(mut topics: &mut Vec<Topic>, indices: &[usize]) -> Option<Topic> {
+    let mut index = None;
     for i in 0..indices.len() {
         let idx = indices[i];
+        index = Some(idx);
         if i == indices.len() - 1 {
-            return topics.remove(idx);
+            break;
         } else {
-            topics = &mut topics[idx].children;
+            topics = &mut topics.get_mut(idx)?.children;
         }
     }
-    unreachable!()
+    if let Some(idx) = index {
+        Some(topics.remove(idx))
+    } else {
+        None
+    }
 }
 
 pub fn insert_topic(mut topics: &mut Vec<Topic>, indices: &[usize], topic: Topic) {
-    for i in 0..indices.len() {
-        let idx = indices[i];
-        if i == indices.len() - 1 {
-            topics[idx].children.push(topic);
-            return;
-        } else {
-            topics = &mut topics[idx].children;
-        }
+    for &idx in indices {
+        topics = &mut topics[idx].children;
     }
+    topics.push(topic);
 }
