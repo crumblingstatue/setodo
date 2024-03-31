@@ -228,11 +228,7 @@ pub fn remove_topic(mut topics: &mut Vec<Topic>, indices: &[usize]) -> Option<To
             topics = &mut topics.get_mut(idx)?.children;
         }
     }
-    if let Some(idx) = index {
-        Some(topics.remove(idx))
-    } else {
-        None
-    }
+    index.map(|idx| topics.remove(idx))
 }
 
 pub fn insert_topic(mut topics: &mut Vec<Topic>, indices: &[usize], topic: Topic) {
