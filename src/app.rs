@@ -199,7 +199,14 @@ pub fn move_task_into_topic(
     Ok(())
 }
 
+pub fn move_topic_precondition(src_idx: &[usize], dst_idx: &[usize]) -> bool {
+    !(dst_idx.len() >= src_idx.len() && src_idx == &dst_idx[..src_idx.len()])
+}
+
 pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize]) {
+    if !move_topic_precondition(src_idx, dst_idx) {
+        return;
+    }
     if let Some(topic) = remove_topic(topics, src_idx) {
         insert_topic(topics, dst_idx, topic);
     }
