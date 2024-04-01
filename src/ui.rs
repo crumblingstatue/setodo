@@ -160,7 +160,11 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                         topics.swap(*last, *last + 1);
                         *last += 1;
                     }
-                    if ui.button("Move topic into").clicked() {
+                    if ui
+                        .button("⬈ Move")
+                        .on_hover_text("Move topic inside another topic")
+                        .clicked()
+                    {
                         app.temp.state = UiState::move_topic_into(app.per.topic_sel.clone());
                     }
                 }
