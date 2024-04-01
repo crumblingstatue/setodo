@@ -94,9 +94,11 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
         }
         UiState::MoveTopicInto { src_idx } => {
             ui.label("Click on topic to move into!");
-            ui.label(any_clicked.to_string());
             if any_clicked {
                 tree::move_(&mut app.per.topics, src_idx, &app.per.topic_sel);
+                app.temp.state = UiState::Normal;
+            }
+            if ui.button("Cancel").clicked() {
                 app.temp.state = UiState::Normal;
             }
         }
