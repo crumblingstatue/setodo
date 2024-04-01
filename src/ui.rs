@@ -124,6 +124,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                 }
                 if ui
                     .add_enabled(!app.per.topic_sel.is_empty(), egui::Button::new(ph::TRASH))
+                    .on_hover_text("Delete topic")
                     .clicked()
                     && !app.per.topic_sel.is_empty()
                 {
@@ -145,6 +146,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                     };
                     if ui
                         .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
+                        .on_hover_text("Move topic up")
                         .clicked()
                     {
                         topics.swap(*last, *last - 1);
@@ -155,6 +157,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                             *last < topics.len() - 1,
                             egui::Button::new(ph::ARROW_FAT_DOWN),
                         )
+                        .on_hover_text("Move topic down")
                         .clicked()
                     {
                         topics.swap(*last, *last + 1);
