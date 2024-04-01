@@ -83,9 +83,11 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                         task_sel: None,
                         children: Vec::new(),
                     });
+                    let mut new_sel = parent_idx.to_vec();
+                    new_sel.push(topic_list.len() - 1);
                     app.temp.state = UiState::Normal;
                     // TODO: Do something more reasonable here
-                    app.per.topic_sel.clear();
+                    app.per.topic_sel = new_sel;
                     app.temp.per_dirty = true;
                 }
             }
