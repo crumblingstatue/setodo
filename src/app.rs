@@ -1,6 +1,7 @@
 use {
     crate::{
         data::{Entry, Topic},
+        tree,
         ui::{central_panel_ui, tree_view_ui},
     },
     eframe::{
@@ -192,55 +193,9 @@ pub fn move_task_into_topic(
     task: Entry,
     topic_sel: &[usize],
 ) -> Result<(), ()> {
-    let Some(topic) = get_topic_mut(topics, topic_sel) else {
+    let Some(topic) = tree::get_mut(topics, topic_sel) else {
         return Err(());
     };
     topic.entries.push(task);
     Ok(())
-}
-
-pub fn move_topic_precondition(src_idx: &[usize], dst_idx: &[usize]) -> bool {
-    !(dst_idx.len() >= src_idx.len() && src_idx == &dst_idx[..src_idx.len()])
-}
-
-pub fn move_topic(topics: &mut Vec<Topic>, src_idx: &[usize], dst_idx: &[usize]) {
-    if !move_topic_precondition(src_idx, dst_idx) {
-        return;
-    }
-    if let Some(topic) = remove_topic(topics, src_idx) {
-        insert_topic(topics, dst_idx, topic);
-    }
-}
-
-pub fn get_topic_mut<'t>(mut topics: &'t mut [Topic], indices: &[usize]) -> Option<&'t mut Topic> {
-    for i in 0..indices.len() {
-        let idx = *indices.get(i)?;
-        if i == indices.len() - 1 {
-            return topics.get_mut(idx);
-        } else {
-            topics = &mut topics.get_mut(idx)?.children;
-        }
-    }
-    None
-}
-
-pub fn remove_topic(mut topics: &mut Vec<Topic>, indices: &[usize]) -> Option<Topic> {
-    let mut index = None;
-    for i in 0..indices.len() {
-        let idx = indices[i];
-        index = Some(idx);
-        if i == indices.len() - 1 {
-            break;
-        } else {
-            topics = &mut topics.get_mut(idx)?.children;
-        }
-    }
-    index.map(|idx| topics.remove(idx))
-}
-
-pub fn insert_topic(mut topics: &mut Vec<Topic>, indices: &[usize], topic: Topic) {
-    for &idx in indices {
-        topics = &mut topics[idx].children;
-    }
-    topics.push(topic);
 }

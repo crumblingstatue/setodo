@@ -15,6 +15,12 @@ pub struct Topic {
     pub children: Vec<Topic>,
 }
 
+impl crate::tree::Node for Topic {
+    fn children_mut(&mut self) -> &mut Vec<Self> {
+        &mut self.children
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Entry {
     pub title: String,

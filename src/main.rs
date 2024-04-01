@@ -9,6 +9,7 @@ use {
 
 mod app;
 mod data;
+mod tree;
 mod ui;
 
 fn main() {

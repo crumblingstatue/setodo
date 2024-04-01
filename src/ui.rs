@@ -1,10 +1,8 @@
 use {
     crate::{
-        app::{
-            get_topic_mut, move_task_into_topic, move_topic, remove_topic, StoredFontData, TodoApp,
-            TodoAppTemp, UiState,
-        },
+        app::{move_task_into_topic, StoredFontData, TodoApp, TodoAppTemp, UiState},
         data::{Attachment, Entry, EntryKind, Topic},
+        tree,
     },
     constcat::concat as cc,
     eframe::egui::{
@@ -74,7 +72,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
             } else {
                 ui.text_edit_singleline(name).request_focus();
                 if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
-                    let topic_list = match get_topic_mut(&mut app.per.topics, parent_idx) {
+                    let topic_list = match tree::get_mut(&mut app.per.topics, parent_idx) {
                         Some(topic) => &mut topic.children,
                         None => &mut app.per.topics,
                     };
@@ -96,7 +94,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
             ui.label("Click on topic to move into!");
             ui.label(any_clicked.to_string());
             if any_clicked {
-                move_topic(&mut app.per.topics, src_idx, &app.per.topic_sel);
+                tree::move_(&mut app.per.topics, src_idx, &app.per.topic_sel);
                 app.temp.state = UiState::Normal;
             }
         }
@@ -127,7 +125,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                     .clicked()
                     && !app.per.topic_sel.is_empty()
                 {
-                    remove_topic(&mut app.per.topics, &app.per.topic_sel);
+                    tree::remove(&mut app.per.topics, &app.per.topic_sel);
                     // TODO: Do something more reasonable
                     app.per.topic_sel.clear();
                 }
@@ -135,7 +133,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                     let topics = if first_chunk.is_empty() {
                         &mut app.per.topics
                     } else {
-                        match get_topic_mut(&mut app.per.topics, first_chunk) {
+                        match tree::get_mut(&mut app.per.topics, first_chunk) {
                             Some(topic) => &mut topic.children,
                             None => {
                                 ui.label("TODO: Bug (probably)");
@@ -237,7 +235,7 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
 fn find_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     let find_str = &app.temp.find_string;
     for matched_topic in collect_matches(&app.per.topics, find_str) {
-        let Some(topic) = get_topic_mut(&mut app.per.topics, &matched_topic.cursor) else {
+        let Some(topic) = tree::get_mut(&mut app.per.topics, &matched_topic.cursor) else {
             ui.label(format!("<error indexing: ({:?}()>", matched_topic.cursor));
             continue;
         };
@@ -396,7 +394,7 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         let cp_avail_width = ui.available_width();
         ui.vertical(|ui| {
             if !app.per.topic_sel.is_empty() {
-                let Some(topic) = get_topic_mut(&mut app.per.topics, &app.per.topic_sel) else {
+                let Some(topic) = tree::get_mut(&mut app.per.topics, &app.per.topic_sel) else {
                     ui.label(format!(
                         "<error getting topic. index: {:?}>",
                         app.per.topic_sel
