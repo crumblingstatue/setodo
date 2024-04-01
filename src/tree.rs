@@ -10,8 +10,18 @@ pub fn move_<T: Node>(nodes: &mut Vec<T>, src_idx: &[usize], dst_idx: &[usize]) 
     if !move_precondition(src_idx, dst_idx) {
         return;
     }
+    // The tricky part is, if we remove the src index, it can invalidate the dst index at
+    // the same level, so we need to update that index.
+    let src_last_idx_idx = src_idx.len().saturating_sub(1);
+    let mut dst_final_idx = dst_idx;
+    let mut dst_new_idx_buf;
+    if src_idx.get(src_last_idx_idx) < dst_idx.get(src_last_idx_idx) {
+        dst_new_idx_buf = dst_idx.to_vec();
+        dst_new_idx_buf[src_last_idx_idx] = dst_new_idx_buf[src_last_idx_idx].saturating_sub(1);
+        dst_final_idx = &dst_new_idx_buf;
+    }
     if let Some(node) = remove(nodes, src_idx) {
-        insert(nodes, dst_idx, node);
+        insert(nodes, dst_final_idx, node);
     }
 }
 
@@ -46,4 +56,35 @@ pub fn insert<T: Node>(mut nodes: &mut Vec<T>, indices: &[usize], node: T) {
         nodes = nodes[idx].children_mut();
     }
     nodes.push(node);
+}
+
+#[cfg(test)]
+mod test {
+    use super::move_;
+
+    #[derive(PartialEq, Debug)]
+    struct N(&'static str, Vec<N>);
+    impl super::Node for N {
+        fn children_mut(&mut self) -> &mut Vec<Self> {
+            &mut self.1
+        }
+    }
+    #[test]
+    fn test_move_b_to_a() {
+        let mut nodes = vec![N("a", vec![N("a1", vec![])]), N("b", vec![N("b1", vec![])])];
+        move_(&mut nodes, &[1], &[0]);
+        assert_eq!(
+            nodes,
+            vec![N("a", vec![N("a1", vec![]), N("b", vec![N("b1", vec![])])]),]
+        )
+    }
+    #[test]
+    fn test_move_a_to_b() {
+        let mut nodes = vec![N("a", vec![N("a1", vec![])]), N("b", vec![N("b1", vec![])])];
+        move_(&mut nodes, &[0], &[1]);
+        assert_eq!(
+            nodes,
+            vec![N("b", vec![N("b1", vec![]), N("a", vec![N("a1", vec![])])])]
+        )
+    }
 }
