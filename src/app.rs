@@ -127,7 +127,7 @@ impl UiState {
 }
 
 pub fn default_data_file_path() -> PathBuf {
-    dirs::home_dir().unwrap().join(".setodo.dat")
+    dirs_sys::home_dir().unwrap().join(".setodo.dat")
 }
 
 impl TodoApp {
