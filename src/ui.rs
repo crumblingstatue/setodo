@@ -10,6 +10,7 @@ use {
     },
     egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,
+    egui_modal::Modal,
     egui_phosphor::regular as ph,
 };
 
@@ -680,7 +681,10 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                                 dir_exists = true;
                             }
                             Err(e) => {
-                                error_msgbox(&format!("Failed to create tmp dir: {}", e));
+                                error_msgbox(
+                                    &format!("Failed to create tmp dir: {}", e),
+                                    &app_temp.modal,
+                                );
                                 dir_exists = false;
                             }
                         }
@@ -689,10 +693,16 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                         match std::fs::write(&path, &attachment.data) {
                             Ok(_) => {
                                 if let Err(e) = open::that(path) {
-                                    error_msgbox(&format!("Failed to open file: {}", e))
+                                    error_msgbox(
+                                        &format!("Failed to open file: {}", e),
+                                        &app_temp.modal,
+                                    )
                                 }
                             }
-                            Err(e) => error_msgbox(&format!("Failed to save file: {}", e)),
+                            Err(e) => error_msgbox(
+                                &format!("Failed to save file: {}", e),
+                                &app_temp.modal,
+                            ),
                         }
                     }
                 }
@@ -700,26 +710,32 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
         }
         ui.separator();
         if ui.button("Attach files").clicked() {
-            if let Some(paths) = rfd::FileDialog::new().pick_files() {
-                for path in paths {
-                    if let Some(filename) = path.file_name() {
-                        let data = std::fs::read(&path).unwrap();
-                        entry.attachments.push(Attachment {
-                            filename: filename.into(),
-                            data,
-                        })
-                    } else {
-                        error_msgbox(&format!("Could not determine filename for file {:?}", path));
-                    }
+            app_temp.file_dialog.select_multiple();
+        }
+        if let Some(paths) = app_temp.file_dialog.take_selected_multiple() {
+            for path in paths {
+                if let Some(filename) = path.file_name() {
+                    let data = std::fs::read(&path).unwrap();
+                    entry.attachments.push(Attachment {
+                        filename: filename.into(),
+                        data,
+                    })
+                } else {
+                    error_msgbox(
+                        &format!("Could not determine filename for file {:?}", path),
+                        &app_temp.modal,
+                    );
                 }
             }
         }
     });
 }
 
-pub fn error_msgbox(msg: &str) {
-    rfd::MessageDialog::new()
-        .set_level(rfd::MessageLevel::Error)
-        .set_description(msg)
-        .show();
+pub fn error_msgbox(msg: &str, modal: &Modal) {
+    modal
+        .dialog()
+        .with_title("Error")
+        .with_icon(egui_modal::Icon::Error)
+        .with_body(msg)
+        .open();
 }

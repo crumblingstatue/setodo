@@ -9,7 +9,9 @@ use {
         Frame,
     },
     egui_commonmark::CommonMarkCache,
+    egui_file_dialog::FileDialog,
     egui_fontcfg::{CustomFontPaths, FontCfgUi},
+    egui_modal::Modal,
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
     std::{
@@ -64,10 +66,12 @@ pub struct TodoAppTemp {
     pub per_dirty: bool,
     /// Path to the data file we're reading from / writing to
     pub data_file_path: PathBuf,
+    pub file_dialog: FileDialog,
+    pub modal: Modal,
 }
 
 impl TodoAppTemp {
-    fn new(data_file_path: PathBuf) -> Self {
+    fn new(data_file_path: PathBuf, ctx: &egui::Context) -> Self {
         Self {
             state: UiState::Normal,
             font_defs_ui: Default::default(),
@@ -79,6 +83,8 @@ impl TodoAppTemp {
             esc_was_used: false,
             per_dirty: false,
             data_file_path,
+            file_dialog: FileDialog::new(),
+            modal: Modal::new(ctx, "modal-dialog"),
         }
     }
 }
@@ -125,16 +131,16 @@ pub fn default_data_file_path() -> PathBuf {
 }
 
 impl TodoApp {
-    pub fn new(data_file_path: PathBuf) -> Self {
+    pub fn new(data_file_path: PathBuf, ctx: &egui::Context) -> Self {
         Self {
             per: TodoAppPersistent::default(),
-            temp: TodoAppTemp::new(data_file_path),
+            temp: TodoAppTemp::new(data_file_path, ctx),
         }
     }
-    pub fn load(data_file_path: PathBuf) -> Result<Self, Box<dyn Error>> {
+    pub fn load(data_file_path: PathBuf, ctx: &egui::Context) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             per: TodoAppPersistent::load(&data_file_path)?,
-            temp: TodoAppTemp::new(data_file_path),
+            temp: TodoAppTemp::new(data_file_path, ctx),
         })
     }
     pub fn save_persistent(&mut self) -> Result<(), Box<dyn Error>> {
@@ -178,6 +184,7 @@ impl eframe::App for TodoApp {
         }
         egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
+        self.temp.file_dialog.update(ctx);
         if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) && !self.temp.esc_was_used {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             if let Err(e) = self.save_persistent() {
