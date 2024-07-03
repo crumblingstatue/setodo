@@ -81,7 +81,7 @@ fn main() {
             egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
             app.temp.font_defs_edit_copy = fonts.clone();
             c_ctx.egui_ctx.set_fonts(fonts);
-            Box::new(app)
+            Ok(Box::new(app))
         }),
     )
     .unwrap();
