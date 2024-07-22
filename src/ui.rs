@@ -368,6 +368,10 @@ fn topics_ui(
                                 };
                                 ui.close_menu();
                             }
+                            if ui.button(cc!(ph::FILE_PLUS, " Create subtopic")).clicked() {
+                                topic.children.push(Topic::new_unnamed());
+                                ui.close_menu();
+                            }
                             if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
                                 *cmd = Some(Cmd::RemoveTopic {
                                     idx: cursor.clone(),

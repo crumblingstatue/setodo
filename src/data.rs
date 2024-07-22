@@ -15,6 +15,18 @@ pub struct Topic {
     pub children: Vec<Topic>,
 }
 
+impl Topic {
+    pub fn new_unnamed() -> Self {
+        Self {
+            name: "New unnamed topic".into(),
+            desc: String::new(),
+            entries: Vec::new(),
+            task_sel: None,
+            children: Vec::new(),
+        }
+    }
+}
+
 impl crate::tree::Node for Topic {
     fn children_mut(&mut self) -> &mut Vec<Self> {
         &mut self.children
