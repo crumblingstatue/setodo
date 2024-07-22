@@ -473,7 +473,7 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         |ui| match app.temp.state {
                             UiState::EditTopicDesc => {
                                 if ui
-                                    .button(egui_phosphor::regular::X_CIRCLE)
+                                    .button(ph::STOP_CIRCLE)
                                     .on_hover_text("Stop editing")
                                     .clicked()
                                 {
