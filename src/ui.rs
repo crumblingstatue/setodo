@@ -1,6 +1,7 @@
 use {
     crate::{
         app::{move_task_into_topic, ActionFlags, StoredFontData, TodoApp, TodoAppTemp, UiState},
+        cmd::Cmd,
         data::{Attachment, Entry, EntryKind, Topic},
         tree,
     },
@@ -55,6 +56,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         &mut app.temp.state,
                         &mut app.temp.per_dirty,
                         &mut app.temp.action_flags,
+                        &mut app.temp.cmd,
                     );
                 });
             });
@@ -158,7 +160,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                     }
                     if ui
                         .add_enabled(
-                            *last < topics.len() - 1,
+                            *last < topics.len().saturating_sub(1),
                             egui::Button::new(ph::ARROW_FAT_DOWN),
                         )
                         .on_hover_text("Move topic down")
@@ -331,6 +333,7 @@ fn matching_topic(topic: &Topic, find_str: &str, cursor: Vec<usize>) -> Option<M
     })
 }
 
+#[expect(clippy::too_many_arguments)]
 fn topics_ui(
     topics: &mut [Topic],
     cursor: &mut Vec<usize>,
@@ -339,6 +342,7 @@ fn topics_ui(
     state: &mut UiState,
     per_dirty: &mut bool,
     action_flags: &mut ActionFlags,
+    cmd: &mut Option<Cmd>,
 ) -> bool {
     let mut any_clicked = false;
     cursor.push(0);
@@ -355,6 +359,24 @@ fn topics_ui(
                 }
             }
             _ => {
+                macro_rules! ctx_menu {
+                    () => {
+                        |ui: &mut egui::Ui| {
+                            if ui.button(cc!(ph::NOTE_PENCIL, " Rename topic")).clicked() {
+                                *state = UiState::RenameTopic {
+                                    idx: cursor.clone(),
+                                };
+                                ui.close_menu();
+                            }
+                            if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
+                                *cmd = Some(Cmd::RemoveTopic {
+                                    idx: cursor.clone(),
+                                });
+                                ui.close_menu();
+                            }
+                        }
+                    };
+                }
                 if topic.children.is_empty() {
                     let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
                     if re.clicked() {
@@ -366,6 +388,7 @@ fn topics_ui(
                             idx: cursor.clone(),
                         }
                     }
+                    re.context_menu(ctx_menu!());
                 } else {
                     let id = ui.make_persistent_id("cheader").with(&topic.name);
                     let mut cs = CollapsingState::load_with_default_open(ui.ctx(), id, false);
@@ -386,6 +409,7 @@ fn topics_ui(
                                 idx: cursor.clone(),
                             }
                         }
+                        re.context_menu(ctx_menu!());
                     })
                     .body(|ui| {
                         any_clicked |= topics_ui(
@@ -396,6 +420,7 @@ fn topics_ui(
                             state,
                             per_dirty,
                             action_flags,
+                            cmd,
                         );
                     });
                 }

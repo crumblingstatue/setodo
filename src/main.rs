@@ -8,6 +8,7 @@ use {
 };
 
 mod app;
+mod cmd;
 mod data;
 mod tree;
 mod ui;
