@@ -342,7 +342,7 @@ fn topics_ui(
     state: &mut UiState,
     per_dirty: &mut bool,
     action_flags: &mut ActionFlags,
-    cmd: &mut Option<Cmd>,
+    cmd: &mut Vec<Cmd>,
 ) -> bool {
     let mut any_clicked = false;
     cursor.push(0);
@@ -351,6 +351,14 @@ fn topics_ui(
         match state {
             UiState::RenameTopic { idx } if idx == cursor => {
                 let re = ui.text_edit_singleline(&mut topic.name);
+                cmd.retain(|cmd| {
+                    if let Cmd::FocusTextEdit = cmd {
+                        re.request_focus();
+                        false
+                    } else {
+                        true
+                    }
+                });
                 if re.lost_focus() {
                     *state = UiState::Normal;
                 }
@@ -366,6 +374,7 @@ fn topics_ui(
                                 *state = UiState::RenameTopic {
                                     idx: cursor.clone(),
                                 };
+                                cmd.push(Cmd::FocusTextEdit);
                                 ui.close_menu();
                             }
                             if ui.button(cc!(ph::FILE_PLUS, " Create subtopic")).clicked() {
@@ -373,7 +382,7 @@ fn topics_ui(
                                 ui.close_menu();
                             }
                             if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
-                                *cmd = Some(Cmd::RemoveTopic {
+                                cmd.push(Cmd::RemoveTopic {
                                     idx: cursor.clone(),
                                 });
                                 ui.close_menu();

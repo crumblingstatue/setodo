@@ -70,7 +70,7 @@ pub struct TodoAppTemp {
     pub file_dialog: FileDialog,
     pub modal: Modal,
     pub action_flags: ActionFlags,
-    pub cmd: Option<Cmd>,
+    pub cmd: Vec<Cmd>,
 }
 
 #[derive(Default)]
@@ -100,7 +100,7 @@ impl TodoAppTemp {
             file_dialog: FileDialog::new(),
             modal: Modal::new(ctx, "modal-dialog"),
             action_flags: Default::default(),
-            cmd: None,
+            cmd: Vec::new(),
         }
     }
 }
@@ -209,14 +209,18 @@ impl eframe::App for TodoApp {
         }
         self.temp.esc_was_used = false;
         self.temp.action_flags.clear();
-        if let Some(cmd) = self.temp.cmd.take() {
+        self.temp.cmd.retain(|cmd| {
+            let mut retain = true;
             match cmd {
                 Cmd::RemoveTopic { idx } => {
-                    tree::remove(&mut self.per.topics, &idx);
+                    tree::remove(&mut self.per.topics, idx);
                     self.temp.per_dirty = true;
+                    retain = false;
                 }
+                Cmd::FocusTextEdit => {}
             }
-        }
+            retain
+        });
     }
 }
 
