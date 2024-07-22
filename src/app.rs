@@ -68,6 +68,18 @@ pub struct TodoAppTemp {
     pub data_file_path: PathBuf,
     pub file_dialog: FileDialog,
     pub modal: Modal,
+    pub action_flags: ActionFlags,
+}
+
+#[derive(Default)]
+pub struct ActionFlags {
+    pub expand_all: bool,
+    pub collapse_all: bool,
+}
+impl ActionFlags {
+    fn clear(&mut self) {
+        *self = Self::default();
+    }
 }
 
 impl TodoAppTemp {
@@ -85,6 +97,7 @@ impl TodoAppTemp {
             data_file_path,
             file_dialog: FileDialog::new(),
             modal: Modal::new(ctx, "modal-dialog"),
+            action_flags: Default::default(),
         }
     }
 }
@@ -192,6 +205,7 @@ impl eframe::App for TodoApp {
             }
         }
         self.temp.esc_was_used = false;
+        self.temp.action_flags.clear();
     }
 }
 

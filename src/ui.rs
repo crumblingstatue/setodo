@@ -1,6 +1,6 @@
 use {
     crate::{
-        app::{move_task_into_topic, StoredFontData, TodoApp, TodoAppTemp, UiState},
+        app::{move_task_into_topic, ActionFlags, StoredFontData, TodoApp, TodoAppTemp, UiState},
         data::{Attachment, Entry, EntryKind, Topic},
         tree,
     },
@@ -54,6 +54,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                         ui,
                         &mut app.temp.state,
                         &mut app.temp.per_dirty,
+                        &mut app.temp.action_flags,
                     );
                 });
             });
@@ -209,6 +210,21 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                     ui.close_menu();
                 }
                 ui.separator();
+                if ui
+                    .button(cc!(ph::ARROW_BEND_LEFT_UP, " Collapse all"))
+                    .clicked()
+                {
+                    app.temp.action_flags.collapse_all = true;
+                    ui.close_menu();
+                }
+                if ui
+                    .button(cc!(ph::ARROW_BEND_RIGHT_DOWN, " Expand all"))
+                    .clicked()
+                {
+                    app.temp.action_flags.expand_all = true;
+                    ui.close_menu();
+                }
+                ui.separator();
                 if ui.button("🗛 Font config").clicked() {
                     app.temp.state = UiState::FontCfg;
                     ui.close_menu();
@@ -322,6 +338,7 @@ fn topics_ui(
     ui: &mut egui::Ui,
     state: &mut UiState,
     per_dirty: &mut bool,
+    action_flags: &mut ActionFlags,
 ) -> bool {
     let mut any_clicked = false;
     cursor.push(0);
@@ -351,29 +368,36 @@ fn topics_ui(
                     }
                 } else {
                     let id = ui.make_persistent_id("cheader").with(&topic.name);
-                    CollapsingState::load_with_default_open(ui.ctx(), id, false)
-                        .show_header(ui, |ui| {
-                            let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
-                            if re.clicked() {
-                                topic_sel.clone_from(cursor);
-                                any_clicked = true;
+                    let mut cs = CollapsingState::load_with_default_open(ui.ctx(), id, false);
+                    if action_flags.collapse_all {
+                        cs.set_open(false);
+                    }
+                    if action_flags.expand_all {
+                        cs.set_open(true);
+                    }
+                    cs.show_header(ui, |ui| {
+                        let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
+                        if re.clicked() {
+                            topic_sel.clone_from(cursor);
+                            any_clicked = true;
+                        }
+                        if re.double_clicked() {
+                            *state = UiState::RenameTopic {
+                                idx: cursor.clone(),
                             }
-                            if re.double_clicked() {
-                                *state = UiState::RenameTopic {
-                                    idx: cursor.clone(),
-                                }
-                            }
-                        })
-                        .body(|ui| {
-                            any_clicked |= topics_ui(
-                                &mut topic.children,
-                                cursor,
-                                topic_sel,
-                                ui,
-                                state,
-                                per_dirty,
-                            );
-                        });
+                        }
+                    })
+                    .body(|ui| {
+                        any_clicked |= topics_ui(
+                            &mut topic.children,
+                            cursor,
+                            topic_sel,
+                            ui,
+                            state,
+                            per_dirty,
+                            action_flags,
+                        );
+                    });
                 }
             }
         }
