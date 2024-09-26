@@ -22,7 +22,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     ScrollArea::vertical()
         .max_height(ui.available_height() - 36.0)
         .auto_shrink(false)
-        .id_source("topics_scroll")
+        .id_salt("topics_scroll")
         .show(ui, |ui| {
             ui.vertical(|ui| {
                 if !app.temp.find_string.is_empty() {
@@ -534,7 +534,7 @@ fn tasks_list_ui(
 ) {
     ScrollArea::vertical()
         .auto_shrink([false; 2])
-        .id_source("tasks_scroll")
+        .id_salt("tasks_scroll")
         .max_height(200.0)
         .show(ui, |ui| {
             for (i, entry) in topic.entries.iter_mut().enumerate() {
@@ -710,11 +710,7 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
         if app_temp.view_task_as_markdown {
             // TODO: We might want a less expensive way to check for changes
             let prev = entry.desc.clone();
-            CommonMarkViewer::new("cm_viewer").show_mut(
-                ui,
-                &mut app_temp.cm_cache,
-                &mut entry.desc,
-            );
+            CommonMarkViewer::new().show_mut(ui, &mut app_temp.cm_cache, &mut entry.desc);
             if entry.desc != prev {
                 app_temp.per_dirty = true;
             }
