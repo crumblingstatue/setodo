@@ -36,3 +36,11 @@ branch = "egui-0.29"
 panic = "abort"
 strip = true
 lto = "thin"
+
+# Fix text input being broken on Linux X11
+[patch.crates-io.egui-winit]
+git = "https://github.com/crumblingstatue/egui.git"
+branch = "ime-ignore"
+[patch.crates-io.egui]
+git = "https://github.com/crumblingstatue/egui.git"
+branch = "ime-ignore"
