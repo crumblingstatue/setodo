@@ -63,11 +63,11 @@ fn main() {
                 std::thread::sleep(Duration::from_millis(250));
             });
             c_ctx.egui_ctx.set_visuals(Visuals::dark());
-            let mut app = match TodoApp::load(args.datafile_path.clone(), &c_ctx.egui_ctx) {
+            let mut app = match TodoApp::load(args.datafile_path.clone()) {
                 Ok(app) => app,
                 Err(e) => {
                     eprintln!("{:?}", e);
-                    TodoApp::new(args.datafile_path, &c_ctx.egui_ctx)
+                    TodoApp::new(args.datafile_path)
                 }
             };
             let mut fonts = egui::FontDefinitions::default();

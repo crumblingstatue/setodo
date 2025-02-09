@@ -12,7 +12,6 @@ use {
     egui_commonmark::CommonMarkCache,
     egui_file_dialog::FileDialog,
     egui_fontcfg::{CustomFontPaths, FontCfgUi},
-    egui_modal::Modal,
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
     std::{
@@ -68,9 +67,13 @@ pub struct TodoAppTemp {
     /// Path to the data file we're reading from / writing to
     pub data_file_path: PathBuf,
     pub file_dialog: FileDialog,
-    pub modal: Modal,
     pub action_flags: ActionFlags,
     pub cmd: Vec<Cmd>,
+    pub modal: Option<ModalPayload>,
+}
+
+pub enum ModalPayload {
+    ErrorMsg(String),
 }
 
 #[derive(Default)]
@@ -85,7 +88,7 @@ impl ActionFlags {
 }
 
 impl TodoAppTemp {
-    fn new(data_file_path: PathBuf, ctx: &egui::Context) -> Self {
+    fn new(data_file_path: PathBuf) -> Self {
         Self {
             state: UiState::Normal,
             font_defs_ui: Default::default(),
@@ -98,9 +101,9 @@ impl TodoAppTemp {
             per_dirty: false,
             data_file_path,
             file_dialog: FileDialog::new(),
-            modal: Modal::new(ctx, "modal-dialog"),
             action_flags: Default::default(),
             cmd: Vec::new(),
+            modal: None,
         }
     }
 }
@@ -147,16 +150,16 @@ pub fn default_data_file_path() -> PathBuf {
 }
 
 impl TodoApp {
-    pub fn new(data_file_path: PathBuf, ctx: &egui::Context) -> Self {
+    pub fn new(data_file_path: PathBuf) -> Self {
         Self {
             per: TodoAppPersistent::default(),
-            temp: TodoAppTemp::new(data_file_path, ctx),
+            temp: TodoAppTemp::new(data_file_path),
         }
     }
-    pub fn load(data_file_path: PathBuf, ctx: &egui::Context) -> Result<Self, Box<dyn Error>> {
+    pub fn load(data_file_path: PathBuf) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             per: TodoAppPersistent::load(&data_file_path)?,
-            temp: TodoAppTemp::new(data_file_path, ctx),
+            temp: TodoAppTemp::new(data_file_path),
         })
     }
     pub fn save_persistent(&mut self) -> Result<(), Box<dyn Error>> {
@@ -221,6 +224,21 @@ impl eframe::App for TodoApp {
             }
             retain
         });
+        if let Some(payload) = &self.temp.modal {
+            let mut close = false;
+            egui::Modal::new("modal_popup".into()).show(ctx, |ui| match payload {
+                ModalPayload::ErrorMsg(msg) => {
+                    ui.heading("Error");
+                    ui.label(msg);
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                }
+            });
+            if close {
+                self.temp.modal = None;
+            }
+        }
     }
 }
 

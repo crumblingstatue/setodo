@@ -1,6 +1,9 @@
 use {
     crate::{
-        app::{move_task_into_topic, ActionFlags, StoredFontData, TodoApp, TodoAppTemp, UiState},
+        app::{
+            move_task_into_topic, ActionFlags, ModalPayload, StoredFontData, TodoApp, TodoAppTemp,
+            UiState,
+        },
         cmd::Cmd,
         data::{Attachment, Entry, EntryKind, Topic},
         tree,
@@ -11,7 +14,6 @@ use {
     },
     egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,
-    egui_modal::Modal,
     egui_phosphor::regular as ph,
 };
 
@@ -741,7 +743,7 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                             Err(e) => {
                                 error_msgbox(
                                     &format!("Failed to create tmp dir: {}", e),
-                                    &app_temp.modal,
+                                    &mut app_temp.modal,
                                 );
                                 dir_exists = false;
                             }
@@ -753,13 +755,13 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                                 if let Err(e) = open::that(path) {
                                     error_msgbox(
                                         &format!("Failed to open file: {}", e),
-                                        &app_temp.modal,
+                                        &mut app_temp.modal,
                                     )
                                 }
                             }
                             Err(e) => error_msgbox(
                                 &format!("Failed to save file: {}", e),
-                                &app_temp.modal,
+                                &mut app_temp.modal,
                             ),
                         }
                     }
@@ -768,9 +770,9 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
         }
         ui.separator();
         if ui.button("Attach files").clicked() {
-            app_temp.file_dialog.select_multiple();
+            app_temp.file_dialog.pick_multiple();
         }
-        if let Some(paths) = app_temp.file_dialog.take_selected_multiple() {
+        if let Some(paths) = app_temp.file_dialog.take_picked_multiple() {
             for path in paths {
                 if let Some(filename) = path.file_name() {
                     let data = std::fs::read(&path).unwrap();
@@ -781,7 +783,7 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                 } else {
                     error_msgbox(
                         &format!("Could not determine filename for file {:?}", path),
-                        &app_temp.modal,
+                        &mut app_temp.modal,
                     );
                 }
             }
@@ -789,11 +791,6 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
     });
 }
 
-pub fn error_msgbox(msg: &str, modal: &Modal) {
-    modal
-        .dialog()
-        .with_title("Error")
-        .with_icon(egui_modal::Icon::Error)
-        .with_body(msg)
-        .open();
+pub fn error_msgbox(msg: &str, modal: &mut Option<ModalPayload>) {
+    *modal = Some(ModalPayload::ErrorMsg(msg.to_string()));
 }
