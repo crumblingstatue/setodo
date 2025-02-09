@@ -6,8 +6,8 @@ use {
         ui::{central_panel_ui, tree_view_ui},
     },
     eframe::{
-        egui::{self, FontDefinitions, FontFamily},
         Frame,
+        egui::{self, FontDefinitions, FontFamily},
     },
     egui_commonmark::CommonMarkCache,
     egui_file_dialog::FileDialog,

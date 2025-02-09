@@ -1,8 +1,8 @@
 use {
     crate::{
         app::{
-            move_task_into_topic, ActionFlags, ModalPayload, StoredFontData, TodoApp, TodoAppTemp,
-            UiState,
+            ActionFlags, ModalPayload, StoredFontData, TodoApp, TodoAppTemp, UiState,
+            move_task_into_topic,
         },
         cmd::Cmd,
         data::{Attachment, Entry, EntryKind, Topic},
@@ -10,7 +10,7 @@ use {
     },
     constcat::concat as cc,
     eframe::egui::{
-        self, collapsing_header::CollapsingState, ScrollArea, TextBuffer, ViewportCommand,
+        self, ScrollArea, TextBuffer, ViewportCommand, collapsing_header::CollapsingState,
     },
     egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,

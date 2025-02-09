@@ -1,7 +1,7 @@
 #![feature(let_chains)]
 
 use {
-    app::{default_data_file_path, TodoApp},
+    app::{TodoApp, default_data_file_path},
     eframe::egui::{self, ViewportBuilder, Visuals},
     existing_instance::Endpoint,
     std::{path::PathBuf, time::Duration},
@@ -55,12 +55,14 @@ fn main() {
         native_options,
         Box::new(|c_ctx| {
             let egui_ctx = c_ctx.egui_ctx.clone();
-            std::thread::spawn(move || loop {
-                if ipc_listener.accept().is_some() {
-                    egui_ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
-                    egui_ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            std::thread::spawn(move || {
+                loop {
+                    if ipc_listener.accept().is_some() {
+                        egui_ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                        egui_ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                    }
+                    std::thread::sleep(Duration::from_millis(250));
                 }
-                std::thread::sleep(Duration::from_millis(250));
             });
             c_ctx.egui_ctx.set_visuals(Visuals::dark());
             let mut app = match TodoApp::load(args.datafile_path.clone()) {
