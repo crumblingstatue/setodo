@@ -31,9 +31,21 @@ pub struct TodoAppPersistent {
 
 impl TodoAppPersistent {
     fn load(data_file_path: &Path) -> Result<Self, Box<dyn Error>> {
+        if !data_file_path.exists() {
+            eprintln!("'{}' doesn't exist. Creating.", data_file_path.display());
+            Self::default().save_to_file(data_file_path)?;
+        }
         let file = File::open(data_file_path)?;
         let dec = zstd::stream::read::Decoder::new(file)?;
         Ok(rmp_serde::from_read(dec)?)
+    }
+
+    fn save_to_file(&self, path: &Path) -> Result<(), Box<dyn Error>> {
+        let file = File::create(path)?;
+        let mut enc = zstd::stream::write::Encoder::new(file, zstd::DEFAULT_COMPRESSION_LEVEL)?;
+        self.serialize(&mut Serializer::new(&mut enc))?;
+        enc.finish()?;
+        Ok(())
     }
 }
 
@@ -149,12 +161,6 @@ pub fn default_data_file_path() -> PathBuf {
 }
 
 impl TodoApp {
-    pub fn new(data_file_path: PathBuf) -> Self {
-        Self {
-            per: TodoAppPersistent::default(),
-            temp: TodoAppTemp::new(data_file_path),
-        }
-    }
     pub fn load(data_file_path: PathBuf) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             per: TodoAppPersistent::load(&data_file_path)?,
@@ -162,10 +168,7 @@ impl TodoApp {
         })
     }
     pub fn save_persistent(&mut self) -> Result<(), Box<dyn Error>> {
-        let file = File::create(&self.temp.data_file_path)?;
-        let mut enc = zstd::stream::write::Encoder::new(file, zstd::DEFAULT_COMPRESSION_LEVEL)?;
-        self.per.serialize(&mut Serializer::new(&mut enc))?;
-        enc.finish()?;
+        self.per.save_to_file(&self.temp.data_file_path)?;
         self.temp.per_dirty = false;
         Ok(())
     }
