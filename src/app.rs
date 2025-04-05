@@ -3,7 +3,6 @@ use {
         cmd::Cmd,
         data::{Entry, Topic},
         tree,
-        ui::{central_panel_ui, tree_view_ui},
     },
     eframe::{
         Frame,
@@ -201,8 +200,8 @@ impl eframe::App for TodoApp {
                 eprintln!("Error reloading: {e}");
             }
         }
-        egui::SidePanel::left("tree_view").show(ctx, |ui| tree_view_ui(ui, self));
-        egui::CentralPanel::default().show(ctx, |ui| central_panel_ui(ui, self));
+        egui::SidePanel::left("tree_view").show(ctx, |ui| crate::ui::tree_view::ui(ui, self));
+        egui::CentralPanel::default().show(ctx, |ui| crate::ui::central_panel::ui(ui, self));
         self.temp.file_dialog.update(ctx);
         if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) && !self.temp.esc_was_used {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
