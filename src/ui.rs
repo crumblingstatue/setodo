@@ -524,7 +524,6 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     });
 }
 
-#[expect(clippy::too_many_lines)]
 fn tasks_list_ui(
     ui: &mut egui::Ui,
     app_temp: &mut TodoAppTemp,
@@ -613,77 +612,75 @@ fn tasks_list_ui(
                 }
             }
         } else {
-            if ui.button(ph::FILE_PLUS).clicked()
-                || ui.input(|inp| inp.key_pressed(egui::Key::Insert))
-            {
-                app_temp.state = UiState::add_task();
-            }
-            if ui.button(ph::TRASH).clicked() {
-                if let Some(task_sel) = topic.task_sel {
-                    topic.entries.remove(task_sel);
-                    if topic.entries.is_empty() {
-                        topic.task_sel = None;
-                    } else {
-                        topic.task_sel = Some(task_sel.clamp(0, topic.entries.len() - 1));
-                    }
-                }
-            }
-            if let Some(task_sel) = topic.task_sel {
-                if ui
-                    .add_enabled(task_sel > 0, egui::Button::new(ph::ARROW_FAT_UP))
-                    .clicked()
-                {
-                    topic.entries.swap(task_sel, task_sel - 1);
-                    topic.task_sel = Some(task_sel - 1);
-                }
-                if ui
-                    .add_enabled(
-                        task_sel < topic.entries.len() - 1,
-                        egui::Button::new(ph::ARROW_FAT_DOWN),
-                    )
-                    .clicked()
-                {
-                    topic.entries.swap(task_sel, task_sel + 1);
-                    topic.task_sel = Some(task_sel + 1);
-                }
-                if ui
-                    .button(ph::SORT_DESCENDING)
-                    .on_hover_text("Auto sort")
-                    .clicked()
-                {
-                    topic
-                        .entries
-                        .sort_by(|a, b| a.done.cmp(&b.done).then_with(|| a.title.cmp(&b.title)));
-                }
-                if ui
-                    .button("⬈ Move")
-                    .on_hover_text("Move into another topic")
-                    .clicked()
-                {
-                    app_temp.state = UiState::MoveTaskIntoTopic(topic.entries.remove(task_sel));
-                    topic.task_sel = None;
-                }
-                let Some(entry) = topic.entries.get_mut(task_sel) else {
-                    ui.label("<error getting entry>");
-                    return;
-                };
-                egui::ComboBox::new("kind_combo", "Kind")
-                    .selected_text(entry.kind.label())
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut entry.kind,
-                            EntryKind::Task,
-                            EntryKind::Task.label(),
-                        );
-                        ui.selectable_value(
-                            &mut entry.kind,
-                            EntryKind::Info,
-                            EntryKind::Info.label(),
-                        );
-                    });
-            }
+            tasks_list_bottom_bar_default_ui(app_temp, topic, ui);
         }
     });
+}
+
+fn tasks_list_bottom_bar_default_ui(
+    app_temp: &mut TodoAppTemp,
+    topic: &mut Topic,
+    ui: &mut egui::Ui,
+) {
+    if ui.button(ph::FILE_PLUS).clicked() || ui.input(|inp| inp.key_pressed(egui::Key::Insert)) {
+        app_temp.state = UiState::add_task();
+    }
+    if ui.button(ph::TRASH).clicked() {
+        if let Some(task_sel) = topic.task_sel {
+            topic.entries.remove(task_sel);
+            if topic.entries.is_empty() {
+                topic.task_sel = None;
+            } else {
+                topic.task_sel = Some(task_sel.clamp(0, topic.entries.len() - 1));
+            }
+        }
+    }
+    if let Some(task_sel) = topic.task_sel {
+        if ui
+            .add_enabled(task_sel > 0, egui::Button::new(ph::ARROW_FAT_UP))
+            .clicked()
+        {
+            topic.entries.swap(task_sel, task_sel - 1);
+            topic.task_sel = Some(task_sel - 1);
+        }
+        if ui
+            .add_enabled(
+                task_sel < topic.entries.len() - 1,
+                egui::Button::new(ph::ARROW_FAT_DOWN),
+            )
+            .clicked()
+        {
+            topic.entries.swap(task_sel, task_sel + 1);
+            topic.task_sel = Some(task_sel + 1);
+        }
+        if ui
+            .button(ph::SORT_DESCENDING)
+            .on_hover_text("Auto sort")
+            .clicked()
+        {
+            topic
+                .entries
+                .sort_by(|a, b| a.done.cmp(&b.done).then_with(|| a.title.cmp(&b.title)));
+        }
+        if ui
+            .button("⬈ Move")
+            .on_hover_text("Move into another topic")
+            .clicked()
+        {
+            app_temp.state = UiState::MoveTaskIntoTopic(topic.entries.remove(task_sel));
+            topic.task_sel = None;
+        }
+        let Some(entry) = topic.entries.get_mut(task_sel) else {
+            ui.label("<error getting entry>");
+            return;
+        };
+        egui::ComboBox::new("kind_combo", "Kind")
+            .selected_text(entry.kind.label())
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut entry.kind, EntryKind::Task, EntryKind::Task.label());
+                ui.selectable_value(&mut entry.kind, EntryKind::Info, EntryKind::Info.label());
+            });
+    }
 }
 
 impl EntryKind {
