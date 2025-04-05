@@ -65,7 +65,6 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     tree_view_bottom_bar(ui, app, any_clicked);
 }
 
-#[expect(clippy::too_many_lines)]
 fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool) {
     ui.horizontal(|ui| match &mut app.temp.state {
         UiState::AddSubtopic { name, parent_idx } => {
@@ -120,62 +119,64 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                 }
             }
         }
-        _ => {
-            ui.horizontal(|ui| {
-                if ui
-                    .button(ph::FILE_PLUS)
-                    .on_hover_text("New topic")
-                    .clicked()
-                {
-                    app.temp.state = UiState::add_subtopic(app.per.topic_sel.clone());
-                }
-                if ui
-                    .add_enabled(!app.per.topic_sel.is_empty(), egui::Button::new(ph::TRASH))
-                    .on_hover_text("Delete topic")
-                    .clicked()
-                    && !app.per.topic_sel.is_empty()
-                {
-                    tree::remove(&mut app.per.topics, &app.per.topic_sel);
-                    // TODO: Do something more reasonable
-                    app.per.topic_sel.clear();
-                }
-                if let Some((last, first_chunk)) = app.per.topic_sel.split_last_mut() {
-                    let topics = if first_chunk.is_empty() {
-                        &mut app.per.topics
-                    } else if let Some(topic) = tree::get_mut(&mut app.per.topics, first_chunk) {
-                        &mut topic.children
-                    } else {
-                        ui.label("TODO: Bug (probably)");
-                        return;
-                    };
-                    if ui
-                        .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
-                        .on_hover_text("Move topic up")
-                        .clicked()
-                    {
-                        topics.swap(*last, *last - 1);
-                        *last -= 1;
-                    }
-                    if ui
-                        .add_enabled(
-                            *last < topics.len().saturating_sub(1),
-                            egui::Button::new(ph::ARROW_FAT_DOWN),
-                        )
-                        .on_hover_text("Move topic down")
-                        .clicked()
-                    {
-                        topics.swap(*last, *last + 1);
-                        *last += 1;
-                    }
-                    if ui
-                        .button("⬈ Move")
-                        .on_hover_text("Move topic inside another topic")
-                        .clicked()
-                    {
-                        app.temp.state = UiState::move_topic_into(app.per.topic_sel.clone());
-                    }
-                }
-            });
+        _ => bottom_bar_default_ui(app, ui),
+    });
+}
+
+fn bottom_bar_default_ui(app: &mut TodoApp, ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+        if ui
+            .button(ph::FILE_PLUS)
+            .on_hover_text("New topic")
+            .clicked()
+        {
+            app.temp.state = UiState::add_subtopic(app.per.topic_sel.clone());
+        }
+        if ui
+            .add_enabled(!app.per.topic_sel.is_empty(), egui::Button::new(ph::TRASH))
+            .on_hover_text("Delete topic")
+            .clicked()
+            && !app.per.topic_sel.is_empty()
+        {
+            tree::remove(&mut app.per.topics, &app.per.topic_sel);
+            // TODO: Do something more reasonable
+            app.per.topic_sel.clear();
+        }
+        if let Some((last, first_chunk)) = app.per.topic_sel.split_last_mut() {
+            let topics = if first_chunk.is_empty() {
+                &mut app.per.topics
+            } else if let Some(topic) = tree::get_mut(&mut app.per.topics, first_chunk) {
+                &mut topic.children
+            } else {
+                ui.label("TODO: Bug (probably)");
+                return;
+            };
+            if ui
+                .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
+                .on_hover_text("Move topic up")
+                .clicked()
+            {
+                topics.swap(*last, *last - 1);
+                *last -= 1;
+            }
+            if ui
+                .add_enabled(
+                    *last < topics.len().saturating_sub(1),
+                    egui::Button::new(ph::ARROW_FAT_DOWN),
+                )
+                .on_hover_text("Move topic down")
+                .clicked()
+            {
+                topics.swap(*last, *last + 1);
+                *last += 1;
+            }
+            if ui
+                .button("⬈ Move")
+                .on_hover_text("Move topic inside another topic")
+                .clicked()
+            {
+                app.temp.state = UiState::move_topic_into(app.per.topic_sel.clone());
+            }
         }
     });
 }
