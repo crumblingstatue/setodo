@@ -67,6 +67,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     tree_view_bottom_bar(ui, app, any_clicked);
 }
 
+#[expect(clippy::too_many_lines)]
 fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool) {
     ui.horizontal(|ui| match &mut app.temp.state {
         UiState::AddSubtopic { name, parent_idx } => {
@@ -89,7 +90,7 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                         task_sel: None,
                         children: Vec::new(),
                     });
-                    let mut new_sel = parent_idx.to_vec();
+                    let mut new_sel = parent_idx.clone();
                     new_sel.push(topic_list.len() - 1);
                     app.temp.state = UiState::Normal;
                     // TODO: Do something more reasonable here
@@ -143,14 +144,11 @@ fn tree_view_bottom_bar(ui: &mut egui::Ui, app: &mut TodoApp, any_clicked: bool)
                 if let Some((last, first_chunk)) = app.per.topic_sel.split_last_mut() {
                     let topics = if first_chunk.is_empty() {
                         &mut app.per.topics
+                    } else if let Some(topic) = tree::get_mut(&mut app.per.topics, first_chunk) {
+                        &mut topic.children
                     } else {
-                        match tree::get_mut(&mut app.per.topics, first_chunk) {
-                            Some(topic) => &mut topic.children,
-                            None => {
-                                ui.label("TODO: Bug (probably)");
-                                return;
-                            }
-                        }
+                        ui.label("TODO: Bug (probably)");
+                        return;
                     };
                     if ui
                         .add_enabled(*last > 0, egui::Button::new(ph::ARROW_FAT_UP))
@@ -249,7 +247,7 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                 if let Err(e) = app.save_persistent() {
                     eprintln!("Autosave error: {e}");
                 }
-            };
+            }
             let re = ui.add(
                 egui::TextEdit::singleline(&mut app.temp.find_string).hint_text("🔍 Find (ctrl+F)"),
             );
@@ -294,24 +292,23 @@ struct MatchingTopic {
 
 fn collect_matches(topics: &[Topic], find_str: &str) -> Vec<MatchingTopic> {
     let mut matches = Vec::new();
-    let cursor = vec![];
-    collect_matches_inner(topics, find_str, cursor, &mut matches);
+    collect_matches_inner(topics, find_str, &[], &mut matches);
     matches
 }
 
 fn collect_matches_inner(
     topics: &[Topic],
     find_str: &str,
-    cursor: Vec<usize>,
+    cursor: &[usize],
     matches: &mut Vec<MatchingTopic>,
 ) {
     for (i, topic) in topics.iter().enumerate() {
-        let mut new_cursor = cursor.clone();
+        let mut new_cursor = cursor.to_owned();
         new_cursor.push(i);
         if let Some(topic) = matching_topic(topic, find_str, new_cursor.clone()) {
             matches.push(topic);
         }
-        collect_matches_inner(&topic.children, find_str, new_cursor, matches);
+        collect_matches_inner(&topic.children, find_str, &new_cursor, matches);
     }
 }
 
@@ -469,7 +466,9 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
         ui.set_min_height(cp_avail_height);
         let cp_avail_width = ui.available_width();
         ui.vertical(|ui| {
-            if !app.per.topic_sel.is_empty() {
+            if app.per.topic_sel.is_empty() {
+                ui.heading("Select a topic on the left, or create one!");
+            } else {
                 let Some(topic) = tree::get_mut(&mut app.per.topics, &app.per.topic_sel) else {
                     ui.label(format!(
                         "<error getting topic. index: {:?}>",
@@ -521,13 +520,12 @@ pub fn central_panel_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     ui.separator();
                     task_ui(en, &mut app.temp, ui, cp_avail_width);
                 }
-            } else {
-                ui.heading("Select a topic on the left, or create one!");
             }
         });
     });
 }
 
+#[expect(clippy::too_many_lines)]
 fn tasks_list_ui(
     ui: &mut egui::Ui,
     app_temp: &mut TodoAppTemp,
@@ -582,8 +580,8 @@ fn tasks_list_ui(
             }
         });
     ui.separator();
-    ui.horizontal(|ui| match &mut app_temp.state {
-        UiState::AddTask(name) => {
+    ui.horizontal(|ui| {
+        if let UiState::AddTask(name) = &mut app_temp.state {
             let clicked = ui.button(ph::CHECK_FAT).clicked();
             if ui.button(ph::X_CIRCLE).clicked()
                 || ui.input(|inp| inp.key_pressed(egui::Key::Escape))
@@ -593,7 +591,7 @@ fn tasks_list_ui(
                 ui.text_edit_singleline(name).request_focus();
                 if clicked || ui.input(|inp| inp.key_pressed(egui::Key::Enter)) {
                     topic.entries.insert(
-                        topic.task_sel.map(|idx| idx + 1).unwrap_or(0),
+                        topic.task_sel.map_or(0, |idx| idx + 1),
                         Entry {
                             title: name.take(),
                             desc: String::new(),
@@ -615,8 +613,7 @@ fn tasks_list_ui(
                     }
                 }
             }
-        }
-        _ => {
+        } else {
             if ui.button(ph::FILE_PLUS).clicked()
                 || ui.input(|inp| inp.key_pressed(egui::Key::Insert))
             {
@@ -737,12 +734,12 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                         dir_exists = true;
                     } else {
                         match std::fs::create_dir(save_dir) {
-                            Ok(_) => {
+                            Ok(()) => {
                                 dir_exists = true;
                             }
                             Err(e) => {
                                 error_msgbox(
-                                    &format!("Failed to create tmp dir: {}", e),
+                                    &format!("Failed to create tmp dir: {e}"),
                                     &mut app_temp.modal,
                                 );
                                 dir_exists = false;
@@ -751,16 +748,16 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                     }
                     if dir_exists {
                         match std::fs::write(&path, &attachment.data) {
-                            Ok(_) => {
+                            Ok(()) => {
                                 if let Err(e) = open::that(path) {
                                     error_msgbox(
-                                        &format!("Failed to open file: {}", e),
+                                        &format!("Failed to open file: {e}"),
                                         &mut app_temp.modal,
-                                    )
+                                    );
                                 }
                             }
                             Err(e) => error_msgbox(
-                                &format!("Failed to save file: {}", e),
+                                &format!("Failed to save file: {e}"),
                                 &mut app_temp.modal,
                             ),
                         }
@@ -779,10 +776,10 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
                     entry.attachments.push(Attachment {
                         filename: filename.into(),
                         data,
-                    })
+                    });
                 } else {
                     error_msgbox(
-                        &format!("Could not determine filename for file {:?}", path),
+                        &format!("Could not determine filename for file '{}'", path.display()),
                         &mut app_temp.modal,
                     );
                 }

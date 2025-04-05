@@ -30,9 +30,8 @@ pub fn get_mut<'t, T: Node>(mut nodes: &'t mut [T], indices: &[usize]) -> Option
         let idx = *indices.get(i)?;
         if i == indices.len() - 1 {
             return nodes.get_mut(idx);
-        } else {
-            nodes = nodes.get_mut(idx)?.children_mut();
         }
+        nodes = nodes.get_mut(idx)?.children_mut();
     }
     None
 }
@@ -44,9 +43,8 @@ pub fn remove<T: Node>(mut nodes: &mut Vec<T>, indices: &[usize]) -> Option<T> {
         index = Some(idx);
         if i == indices.len() - 1 {
             break;
-        } else {
-            nodes = nodes.get_mut(idx)?.children_mut();
         }
+        nodes = nodes.get_mut(idx)?.children_mut();
     }
     index.map(|idx| nodes.remove(idx))
 }
@@ -76,7 +74,7 @@ mod test {
         assert_eq!(
             nodes,
             vec![N("a", vec![N("a1", vec![]), N("b", vec![N("b1", vec![])])]),]
-        )
+        );
     }
     #[test]
     fn test_move_a_to_b() {
@@ -85,6 +83,6 @@ mod test {
         assert_eq!(
             nodes,
             vec![N("b", vec![N("b1", vec![]), N("a", vec![N("a1", vec![])])])]
-        )
+        );
     }
 }

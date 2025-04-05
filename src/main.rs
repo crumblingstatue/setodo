@@ -1,4 +1,5 @@
 #![feature(let_chains)]
+#![warn(clippy::pedantic)]
 
 use {
     app::{TodoApp, default_data_file_path},
@@ -36,7 +37,7 @@ fn main() {
         }
         /// Print this help.
         ["-h" | "--help"] => {
-            println!("{}", HELP);
+            println!("{HELP}");
             help = true;
         }
     }
@@ -68,7 +69,7 @@ fn main() {
             let mut app = match TodoApp::load(args.datafile_path.clone()) {
                 Ok(app) => app,
                 Err(e) => {
-                    eprintln!("{:?}", e);
+                    eprintln!("{e:?}");
                     TodoApp::new(args.datafile_path)
                 }
             };

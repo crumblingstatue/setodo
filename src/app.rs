@@ -15,7 +15,7 @@ use {
     rmp_serde::Serializer,
     serde::{Deserialize, Serialize},
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, HashMap},
         error::Error,
         fs::File,
         path::{Path, PathBuf},
@@ -53,9 +53,9 @@ pub struct StoredFontData {
 pub struct TodoAppTemp {
     pub state: UiState,
     pub font_defs_ui: FontCfgUi,
-    /// Copy of FontDefs for editing through font config UI
+    /// Copy of `FontDefs` for editing through font config UI
     pub font_defs_edit_copy: FontDefinitions,
-    /// Copy of CustomFonts for editing through font config UI
+    /// Copy of `CustomFonts` for editing through font config UI
     pub custom_edit_copy: CustomFontPaths,
     pub cm_cache: CommonMarkCache,
     pub view_task_as_markdown: bool,
@@ -91,9 +91,9 @@ impl TodoAppTemp {
     fn new(data_file_path: PathBuf) -> Self {
         Self {
             state: UiState::Normal,
-            font_defs_ui: Default::default(),
+            font_defs_ui: FontCfgUi::default(),
             font_defs_edit_copy: FontDefinitions::default(),
-            custom_edit_copy: Default::default(),
+            custom_edit_copy: HashMap::default(),
             cm_cache: CommonMarkCache::default(),
             view_task_as_markdown: false,
             find_string: String::new(),
@@ -101,7 +101,7 @@ impl TodoAppTemp {
             per_dirty: false,
             data_file_path,
             file_dialog: FileDialog::new(),
-            action_flags: Default::default(),
+            action_flags: ActionFlags::default(),
             cmd: Vec::new(),
             modal: None,
         }
