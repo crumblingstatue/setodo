@@ -79,8 +79,8 @@ fn main() {
             let mut app = match TodoApp::load(args.datafile_path.clone()) {
                 Ok(app) => app,
                 Err(e) => {
-                    eprintln!("{e:?}");
-                    TodoApp::new(args.datafile_path)
+                    eprintln!("Error loading .setodo.dat: {e} ({e:?})");
+                    return Err("Failed to load .setodo.dat".into());
                 }
             };
             let mut fonts = egui::FontDefinitions::default();
