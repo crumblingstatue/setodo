@@ -9,9 +9,7 @@ use {
         tree,
     },
     constcat::concat as cc,
-    eframe::egui::{
-        self, ScrollArea, TextBuffer, ViewportCommand, collapsing_header::CollapsingState,
-    },
+    eframe::egui::{self, TextBuffer, collapsing_header::CollapsingState},
     egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,
     egui_phosphor::regular as ph,
@@ -21,7 +19,7 @@ pub fn tree_view_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     tree_view_top_bar(ui, app);
     ui.separator();
     let mut any_clicked = false;
-    ScrollArea::vertical()
+    egui::ScrollArea::vertical()
         .max_height(ui.available_height() - 36.0)
         .auto_shrink(false)
         .id_salt("topics_scroll")
@@ -233,7 +231,7 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                 }
                 ui.separator();
                 if ui.button(cc!(ph::DOOR_OPEN, " Save & Quit")).clicked() {
-                    ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     ui.close_menu();
                 }
             });
@@ -532,7 +530,7 @@ fn tasks_list_ui(
     topic: &mut Topic,
     topic_sel: &[usize],
 ) {
-    ScrollArea::vertical()
+    egui::ScrollArea::vertical()
         .auto_shrink([false; 2])
         .id_salt("tasks_scroll")
         .max_height(200.0)
