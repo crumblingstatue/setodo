@@ -79,8 +79,8 @@ fn main() {
             let mut app = match TodoApp::load(args.datafile_path.clone()) {
                 Ok(app) => app,
                 Err(e) => {
-                    eprintln!("Error loading .setodo.dat: {e} ({e:?})");
-                    return Err("Failed to load .setodo.dat".into());
+                    let msg = format!("Error loading .setodo.dat:\n{e}\n{e:?}");
+                    return Ok(Box::new(ErrorReport(msg)));
                 }
             };
             let mut fonts = egui::FontDefinitions::default();
@@ -99,4 +99,25 @@ fn main() {
         }),
     )
     .unwrap();
+}
+
+struct ErrorReport(String);
+
+impl eframe::App for ErrorReport {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Fatal error");
+            ui.separator();
+            ui.label(&self.0);
+            ui.separator();
+            ui.horizontal(|ui| {
+                if ui.button("Close").clicked() {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+                if ui.button("Copy to clipboard").clicked() {
+                    ctx.copy_text(self.0.clone());
+                }
+            });
+        });
+    }
 }
