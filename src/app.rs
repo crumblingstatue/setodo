@@ -140,7 +140,7 @@ impl UiState {
     pub fn add_task() -> Self {
         Self::AddTask(String::default())
     }
-    pub fn move_topic_into(src_idx: Vec<usize>) -> Self {
+    pub const fn move_topic_into(src_idx: Vec<usize>) -> Self {
         Self::MoveTopicInto { src_idx }
     }
 }

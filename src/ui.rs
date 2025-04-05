@@ -688,10 +688,10 @@ fn tasks_list_ui(
 }
 
 impl EntryKind {
-    fn label(&self) -> &'static str {
+    const fn label(&self) -> &'static str {
         match self {
-            EntryKind::Task => "☑ Task",
-            EntryKind::Info => "ℹ Info",
+            Self::Task => "☑ Task",
+            Self::Info => "ℹ Info",
         }
     }
 }

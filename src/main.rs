@@ -1,5 +1,5 @@
 #![feature(let_chains)]
-#![warn(clippy::pedantic)]
+#![warn(clippy::pedantic, clippy::missing_const_for_fn, clippy::use_self)]
 
 use {
     app::{TodoApp, default_data_file_path},
