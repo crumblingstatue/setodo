@@ -193,14 +193,14 @@ fn tasks_list_bottom_bar_default_ui(
     if ui.button(ph::FILE_PLUS).clicked() || ui.input(|inp| inp.key_pressed(egui::Key::Insert)) {
         app_temp.state = UiState::add_task();
     }
-    if ui.button(ph::TRASH).clicked() {
-        if let Some(task_sel) = topic.task_sel {
-            topic.entries.remove(task_sel);
-            if topic.entries.is_empty() {
-                topic.task_sel = None;
-            } else {
-                topic.task_sel = Some(task_sel.clamp(0, topic.entries.len() - 1));
-            }
+    if ui.button(ph::TRASH).clicked()
+        && let Some(task_sel) = topic.task_sel
+    {
+        topic.entries.remove(task_sel);
+        if topic.entries.is_empty() {
+            topic.task_sel = None;
+        } else {
+            topic.task_sel = Some(task_sel.clamp(0, topic.entries.len() - 1));
         }
     }
     if let Some(task_sel) = topic.task_sel {

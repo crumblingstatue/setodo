@@ -193,15 +193,17 @@ impl eframe::App for TodoApp {
                 inp.key_pressed(egui::Key::S),
             )
         });
-        if ctrl && btn_s {
-            if let Err(e) = self.save_persistent() {
-                eprintln!("Error when saving: {e}");
-            }
+        if ctrl
+            && btn_s
+            && let Err(e) = self.save_persistent()
+        {
+            eprintln!("Error when saving: {e}");
         }
-        if ctrl && btn_r {
-            if let Err(e) = self.reload_persistent() {
-                eprintln!("Error reloading: {e}");
-            }
+        if ctrl
+            && btn_r
+            && let Err(e) = self.reload_persistent()
+        {
+            eprintln!("Error reloading: {e}");
         }
         egui::SidePanel::left("tree_view").show(ctx, |ui| crate::ui::tree_view::ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| crate::ui::central_panel::ui(ui, self));
