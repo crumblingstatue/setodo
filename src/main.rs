@@ -1,4 +1,3 @@
-#![feature(let_chains)]
 #![forbid(unsafe_code)]
 #![warn(
     clippy::pedantic,
