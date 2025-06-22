@@ -186,12 +186,13 @@ impl eframe::App for TodoApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
-        let (ctrl, btn_r, btn_s) = ctx.input(|inp| {
-            (
+        let [ctrl, btn_r, btn_s, btn_q] = ctx.input(|inp| {
+            [
                 inp.modifiers.ctrl,
                 inp.key_pressed(egui::Key::R),
                 inp.key_pressed(egui::Key::S),
-            )
+                inp.key_pressed(egui::Key::Q),
+            ]
         });
         if ctrl
             && btn_s
@@ -204,6 +205,9 @@ impl eframe::App for TodoApp {
             && let Err(e) = self.reload_persistent()
         {
             eprintln!("Error reloading: {e}");
+        }
+        if ctrl && btn_q {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         egui::SidePanel::left("tree_view").show(ctx, |ui| crate::ui::tree_view::ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| crate::ui::central_panel::ui(ui, self));

@@ -226,7 +226,13 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                     ui.close_menu();
                 }
                 ui.separator();
-                if ui.button(cc!(ph::DOOR_OPEN, " Save & Quit")).clicked() {
+                if ui
+                    .add(
+                        egui::Button::new(cc!(ph::DOOR_OPEN, " Save & Quit"))
+                            .shortcut_text("Ctrl+Q"),
+                    )
+                    .clicked()
+                {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     ui.close_menu();
                 }
