@@ -45,37 +45,32 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                 };
                 ui.horizontal(|ui| {
                     ui.heading(&topic.name);
-                    ui.with_layout(
-                        egui::Layout::right_to_left(egui::Align::Center),
-                        |ui| match app.temp.state {
-                            UiState::EditTopicDesc => {
-                                if ui
-                                    .button(ph::STOP_CIRCLE)
-                                    .on_hover_text("Stop editing")
-                                    .clicked()
-                                {
-                                    app.temp.state = UiState::Normal;
-                                }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if let UiState::EditTopicDesc = app.temp.state {
+                            if ui
+                                .button(ph::STOP_CIRCLE)
+                                .on_hover_text("Stop editing")
+                                .clicked()
+                            {
+                                app.temp.state = UiState::Normal;
                             }
-                            _ => {
-                                if ui
-                                    .button(egui_phosphor::regular::PENCIL)
-                                    .on_hover_text("Edit description")
-                                    .clicked()
-                                {
-                                    app.temp.state = UiState::EditTopicDesc;
-                                }
-                                if ui
-                                    .button(ph::TRASH)
-                                    .on_hover_text("Clear topic entries")
-                                    .clicked()
-                                {
-                                    app.temp.confirm_action =
-                                        Some(ConfirmAction::ClearTopicEntries);
-                                }
+                        } else {
+                            if ui
+                                .button(egui_phosphor::regular::PENCIL)
+                                .on_hover_text("Edit description")
+                                .clicked()
+                            {
+                                app.temp.state = UiState::EditTopicDesc;
                             }
-                        },
-                    );
+                            if ui
+                                .button(ph::TRASH)
+                                .on_hover_text("Clear topic entries")
+                                .clicked()
+                            {
+                                app.temp.confirm_action = Some(ConfirmAction::ClearTopicEntries);
+                            }
+                        }
+                    });
                 });
                 match app.temp.state {
                     UiState::EditTopicDesc => {
