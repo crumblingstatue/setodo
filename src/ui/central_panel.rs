@@ -1,6 +1,6 @@
 use {
     crate::{
-        app::{ModalPayload, StoredFontData, TodoApp, TodoAppTemp, UiState},
+        app::{ConfirmAction, ModalPayload, StoredFontData, TodoApp, TodoAppTemp, UiState},
         data::{Attachment, Entry, EntryKind, Topic},
         tree,
     },
@@ -64,6 +64,14 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                     .clicked()
                                 {
                                     app.temp.state = UiState::EditTopicDesc;
+                                }
+                                if ui
+                                    .button(ph::TRASH)
+                                    .on_hover_text("Clear topic entries")
+                                    .clicked()
+                                {
+                                    app.temp.confirm_action =
+                                        Some(ConfirmAction::ClearTopicEntries);
                                 }
                             }
                         },

@@ -81,6 +81,13 @@ pub struct TodoAppTemp {
     pub action_flags: ActionFlags,
     pub cmd: Vec<Cmd>,
     pub modal: Option<ModalPayload>,
+    pub confirm_action: Option<ConfirmAction>,
+}
+
+/// Actions that need to be confirmed before executed
+#[derive(Clone, Copy)]
+pub enum ConfirmAction {
+    ClearTopicEntries,
 }
 
 pub enum ModalPayload {
@@ -115,6 +122,7 @@ impl TodoAppTemp {
             action_flags: ActionFlags::default(),
             cmd: Vec::new(),
             modal: None,
+            confirm_action: None,
         }
     }
 }
@@ -178,6 +186,40 @@ impl TodoApp {
         self.temp.per_dirty = false;
         Ok(())
     }
+
+    fn handle_confirm_action(&mut self, ctx: &egui::Context) {
+        let Some(action) = self.temp.confirm_action else {
+            return;
+        };
+        egui::Modal::new("confirm_modal".into()).show(ctx, |ui| {
+            let text = match action {
+                ConfirmAction::ClearTopicEntries => {
+                    "Are you sure you want to clear the topic's entries?\nAll entries will be deleted."
+                }
+            };
+            ui.label(text);
+            ui.horizontal(|ui| {
+                if ui.button("Yes").clicked() {
+                    match action {
+                        ConfirmAction::ClearTopicEntries => self.clear_active_topic_entries(),
+                    }
+                    self.temp.confirm_action = None;
+                }
+                if ui.button("No").clicked() {
+                    self.temp.confirm_action = None;
+                }
+            });
+        });
+    }
+
+    fn clear_active_topic_entries(&mut self) {
+        let Some(topic) = tree::get_mut(&mut self.per.topics, &self.per.topic_sel) else {
+            eprintln!("Couldn't get active topic");
+            return;
+        };
+        topic.entries.clear();
+        topic.task_sel = None;
+    }
 }
 
 impl eframe::App for TodoApp {
@@ -212,6 +254,7 @@ impl eframe::App for TodoApp {
         egui::SidePanel::left("tree_view").show(ctx, |ui| crate::ui::tree_view::ui(ui, self));
         egui::CentralPanel::default().show(ctx, |ui| crate::ui::central_panel::ui(ui, self));
         self.temp.file_dialog.update(ctx);
+        self.handle_confirm_action(ctx);
         if ctx.input(|inp| inp.key_pressed(egui::Key::Escape)) && !self.temp.esc_was_used {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             if let Err(e) = self.save_persistent() {
