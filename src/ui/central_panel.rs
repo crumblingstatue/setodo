@@ -193,7 +193,12 @@ fn tasks_list_bottom_bar_default_ui(
     topic: &mut Topic,
     ui: &mut egui::Ui,
 ) {
-    if ui.button(ph::FILE_PLUS).clicked() || ui.input(|inp| inp.key_pressed(egui::Key::Insert)) {
+    if ui
+        .button(ph::FILE_PLUS)
+        .on_hover_text("Add entry (ctrl+N)")
+        .clicked()
+        || ui.input(|inp| inp.key_pressed(egui::Key::N) && inp.modifiers.ctrl)
+    {
         app_temp.state = UiState::add_task();
     }
     if ui.button(ph::TRASH).clicked()
