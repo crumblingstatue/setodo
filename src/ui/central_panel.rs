@@ -4,7 +4,7 @@ use {
         data::{Attachment, Entry, EntryKind, Topic},
         tree,
     },
-    eframe::egui::{self, TextBuffer as _},
+    eframe::egui::{self, KeyboardShortcut, TextBuffer as _},
     egui_commonmark::CommonMarkViewer,
     egui_fontcfg::FontDefsUiMsg,
     egui_phosphor::regular as ph,
@@ -188,6 +188,10 @@ fn tasks_list_ui(
     });
 }
 
+const ADD_SHORTCUT: KeyboardShortcut = KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::N);
+const DEL_SHORTCUT: KeyboardShortcut =
+    KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::Delete);
+
 fn tasks_list_bottom_bar_default_ui(
     app_temp: &mut TodoAppTemp,
     topic: &mut Topic,
@@ -195,13 +199,23 @@ fn tasks_list_bottom_bar_default_ui(
 ) {
     if ui
         .button(ph::FILE_PLUS)
-        .on_hover_text("Add entry (ctrl+N)")
+        .on_hover_text(format!(
+            "Add entry ({})",
+            ui.ctx().format_shortcut(&ADD_SHORTCUT)
+        ))
         .clicked()
-        || ui.input(|inp| inp.key_pressed(egui::Key::N) && inp.modifiers.ctrl)
+        || ui.input_mut(|inp| inp.consume_shortcut(&ADD_SHORTCUT))
     {
         app_temp.state = UiState::add_task();
     }
-    if ui.button(ph::TRASH).clicked()
+    if (ui
+        .button(ph::TRASH)
+        .on_hover_text(format!(
+            "Delete selected entry ({})",
+            ui.ctx().format_shortcut(&DEL_SHORTCUT)
+        ))
+        .clicked()
+        || ui.input_mut(|inp| inp.consume_shortcut(&DEL_SHORTCUT)))
         && let Some(task_sel) = topic.task_sel
     {
         topic.entries.remove(task_sel);
