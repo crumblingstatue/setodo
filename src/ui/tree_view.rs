@@ -187,10 +187,9 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                         egui::Button::new("💾 Save").shortcut_text("Ctrl+S"),
                     )
                     .clicked()
+                    && let Err(e) = app.save_persistent()
                 {
-                    if let Err(e) = app.save_persistent() {
-                        eprintln!("Error when saving: {e}");
-                    }
+                    eprintln!("Error when saving: {e}");
                 }
                 if ui
                     .add_enabled(
@@ -198,10 +197,9 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                         egui::Button::new("⟲ Reload").shortcut_text("Ctrl+R"),
                     )
                     .clicked()
+                    && let Err(e) = app.reload_persistent()
                 {
-                    if let Err(e) = app.reload_persistent() {
-                        eprintln!("Reload error: {e}");
-                    }
+                    eprintln!("Reload error: {e}");
                 }
                 ui.separator();
                 if ui
