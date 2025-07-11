@@ -191,7 +191,6 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                     if let Err(e) = app.save_persistent() {
                         eprintln!("Error when saving: {e}");
                     }
-                    ui.close_menu();
                 }
                 if ui
                     .add_enabled(
@@ -203,7 +202,6 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                     if let Err(e) = app.reload_persistent() {
                         eprintln!("Reload error: {e}");
                     }
-                    ui.close_menu();
                 }
                 ui.separator();
                 if ui
@@ -211,19 +209,16 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .clicked()
                 {
                     app.temp.action_flags.collapse_all = true;
-                    ui.close_menu();
                 }
                 if ui
                     .button(cc!(ph::ARROW_BEND_RIGHT_DOWN, " Expand all"))
                     .clicked()
                 {
                     app.temp.action_flags.expand_all = true;
-                    ui.close_menu();
                 }
                 ui.separator();
                 if ui.button("🗛 Font config").clicked() {
                     app.temp.state = UiState::FontCfg;
-                    ui.close_menu();
                 }
                 ui.separator();
                 if ui
@@ -234,7 +229,6 @@ fn tree_view_top_bar(ui: &mut egui::Ui, app: &mut TodoApp) {
                     .clicked()
                 {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                    ui.close_menu();
                 }
             });
             if ui
@@ -327,17 +321,14 @@ fn topics_ui(
                                     idx: cursor.clone(),
                                 };
                                 cmd.push(Cmd::FocusTextEdit);
-                                ui.close_menu();
                             }
                             if ui.button(cc!(ph::FILE_PLUS, " Create subtopic")).clicked() {
                                 topic.children.push(Topic::new_unnamed());
-                                ui.close_menu();
                             }
                             if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
                                 cmd.push(Cmd::RemoveTopic {
                                     idx: cursor.clone(),
                                 });
-                                ui.close_menu();
                             }
                         }
                     };
