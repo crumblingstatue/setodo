@@ -333,7 +333,8 @@ fn topics_ui(
                     if re.double_clicked() {
                         *state = UiState::RenameTopic {
                             idx: cursor.clone(),
-                        }
+                        };
+                        cmd.push(Cmd::FocusTextEdit);
                     }
                     re.context_menu(|ui| ctx_menu(ui, state, cursor, topic_sel, cmd, topic));
                 } else {
