@@ -315,6 +315,7 @@ fn topics_ui(
                     ui: &mut egui::Ui,
                     state: &mut UiState,
                     cursor: &[usize],
+                    topic_sel: &mut Vec<usize>,
                     cmd: &mut Vec<Cmd>,
                     topic: &mut Topic,
                 ) {
@@ -326,6 +327,7 @@ fn topics_ui(
                     }
                     if ui.button(cc!(ph::FILE_PLUS, " Create subtopic")).clicked() {
                         topic.children.push(Topic::new_unnamed());
+                        *topic_sel = [cursor, &[topic.children.len() - 1]].concat();
                     }
                     if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
                         cmd.push(Cmd::RemoveTopic {
@@ -344,7 +346,7 @@ fn topics_ui(
                             idx: cursor.clone(),
                         }
                     }
-                    re.context_menu(|ui| ctx_menu(ui, state, cursor, cmd, topic));
+                    re.context_menu(|ui| ctx_menu(ui, state, cursor, topic_sel, cmd, topic));
                 } else {
                     let id = ui.make_persistent_id("cheader").with(&topic.name);
                     let mut cs = CollapsingState::load_with_default_open(ui.ctx(), id, false);
@@ -365,7 +367,7 @@ fn topics_ui(
                                 idx: cursor.clone(),
                             }
                         }
-                        re.context_menu(|ui| ctx_menu(ui, state, cursor, cmd, topic));
+                        re.context_menu(|ui| ctx_menu(ui, state, cursor, topic_sel, cmd, topic));
                     })
                     .body(|ui| {
                         any_clicked |= topics_ui(
