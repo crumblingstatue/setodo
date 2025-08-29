@@ -56,6 +56,13 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                             }
                         } else {
                             if ui
+                                .button(ph::TRASH)
+                                .on_hover_text("Clear topic entries")
+                                .clicked()
+                            {
+                                app.temp.confirm_action = Some(ConfirmAction::ClearTopicEntries);
+                            }
+                            if ui
                                 .button(egui_phosphor::regular::PENCIL)
                                 .on_hover_text("Edit description")
                                 .clicked()
@@ -63,11 +70,13 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 app.temp.state = UiState::EditTopicDesc;
                             }
                             if ui
-                                .button(ph::TRASH)
-                                .on_hover_text("Clear topic entries")
+                                .button(egui_phosphor::regular::CURSOR_TEXT)
+                                .on_hover_text("Edit title")
                                 .clicked()
                             {
-                                app.temp.confirm_action = Some(ConfirmAction::ClearTopicEntries);
+                                app.temp.state = UiState::RenameTopic {
+                                    idx: app.per.topic_sel.clone(),
+                                };
                             }
                         }
                     });
