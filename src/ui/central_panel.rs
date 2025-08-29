@@ -1,6 +1,7 @@
 use {
     crate::{
         app::{ConfirmAction, ModalPayload, StoredFontData, TodoApp, TodoAppTemp, UiState},
+        cmd::Cmd,
         data::{Attachment, Entry, EntryKind, Topic},
         tree,
     },
@@ -77,6 +78,7 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                                 app.temp.state = UiState::RenameTopic {
                                     idx: app.per.topic_sel.clone(),
                                 };
+                                app.temp.cmd.push(Cmd::FocusTextEdit);
                             }
                         }
                     });

@@ -6,7 +6,10 @@ use {
         tree,
     },
     constcat::concat as cc,
-    eframe::egui::{self, TextBuffer as _, collapsing_header::CollapsingState},
+    eframe::egui::{
+        self, TextBuffer as _, collapsing_header::CollapsingState, text::CCursorRange,
+        text_edit::TextEditOutput,
+    },
     egui_phosphor::regular as ph,
 };
 
@@ -294,21 +297,7 @@ fn topics_ui(
         *cursor.last_mut().unwrap() = i;
         match state {
             UiState::RenameTopic { idx } if idx == cursor => {
-                let re = ui.text_edit_singleline(&mut topic.name);
-                cmd.retain(|cmd| {
-                    if let Cmd::FocusTextEdit = cmd {
-                        re.request_focus();
-                        false
-                    } else {
-                        true
-                    }
-                });
-                if re.lost_focus() {
-                    *state = UiState::Normal;
-                }
-                if re.changed() {
-                    *per_dirty = true;
-                }
+                rename_topic_ui(ui, state, per_dirty, cmd, topic);
             }
             _ => {
                 fn ctx_menu(
@@ -387,6 +376,51 @@ fn topics_ui(
     }
     cursor.pop();
     any_clicked
+}
+
+fn rename_topic_ui(
+    ui: &mut egui::Ui,
+    state: &mut UiState,
+    per_dirty: &mut bool,
+    cmd: &mut Vec<Cmd>,
+    topic: &mut Topic,
+) {
+    let txt = egui::TextEdit::singleline(&mut topic.name);
+    let mut out = txt.show(ui);
+    let mut focus_me = false;
+    cmd.retain(|cmd| {
+        if let Cmd::FocusTextEdit = cmd {
+            focus_me = true;
+            false
+        } else {
+            true
+        }
+    });
+    if focus_me {
+        out.response.request_focus();
+        out.select_all(ui.ctx());
+    }
+    let re = &out.response;
+    if re.lost_focus() {
+        *state = UiState::Normal;
+    }
+    if re.changed() {
+        *per_dirty = true;
+    }
+}
+
+trait TextEditOutputExt {
+    fn select_all(&mut self, ctx: &egui::Context);
+}
+
+impl TextEditOutputExt for TextEditOutput {
+    fn select_all(&mut self, ctx: &egui::Context) {
+        self.state
+            .cursor
+            .set_char_range(Some(CCursorRange::select_all(&self.galley)));
+        let state = self.state.clone();
+        state.store(ctx, self.response.id);
+    }
 }
 
 fn collect_matches(topics: &[Topic], find_str: &str) -> Vec<MatchingTopic> {
