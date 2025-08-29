@@ -311,25 +311,27 @@ fn topics_ui(
                 }
             }
             _ => {
-                macro_rules! ctx_menu {
-                    () => {
-                        |ui: &mut egui::Ui| {
-                            if ui.button(cc!(ph::NOTE_PENCIL, " Rename topic")).clicked() {
-                                *state = UiState::RenameTopic {
-                                    idx: cursor.clone(),
-                                };
-                                cmd.push(Cmd::FocusTextEdit);
-                            }
-                            if ui.button(cc!(ph::FILE_PLUS, " Create subtopic")).clicked() {
-                                topic.children.push(Topic::new_unnamed());
-                            }
-                            if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
-                                cmd.push(Cmd::RemoveTopic {
-                                    idx: cursor.clone(),
-                                });
-                            }
-                        }
-                    };
+                fn ctx_menu(
+                    ui: &mut egui::Ui,
+                    state: &mut UiState,
+                    cursor: &[usize],
+                    cmd: &mut Vec<Cmd>,
+                    topic: &mut Topic,
+                ) {
+                    if ui.button(cc!(ph::NOTE_PENCIL, " Rename topic")).clicked() {
+                        *state = UiState::RenameTopic {
+                            idx: cursor.to_owned(),
+                        };
+                        cmd.push(Cmd::FocusTextEdit);
+                    }
+                    if ui.button(cc!(ph::FILE_PLUS, " Create subtopic")).clicked() {
+                        topic.children.push(Topic::new_unnamed());
+                    }
+                    if ui.button(cc!(ph::TRASH, " Delete topic")).clicked() {
+                        cmd.push(Cmd::RemoveTopic {
+                            idx: cursor.to_owned(),
+                        });
+                    }
                 }
                 if topic.children.is_empty() {
                     let re = ui.selectable_label(*topic_sel == *cursor, &topic.name);
@@ -342,7 +344,7 @@ fn topics_ui(
                             idx: cursor.clone(),
                         }
                     }
-                    re.context_menu(ctx_menu!());
+                    re.context_menu(|ui| ctx_menu(ui, state, cursor, cmd, topic));
                 } else {
                     let id = ui.make_persistent_id("cheader").with(&topic.name);
                     let mut cs = CollapsingState::load_with_default_open(ui.ctx(), id, false);
@@ -363,7 +365,7 @@ fn topics_ui(
                                 idx: cursor.clone(),
                             }
                         }
-                        re.context_menu(ctx_menu!());
+                        re.context_menu(|ui| ctx_menu(ui, state, cursor, cmd, topic));
                     })
                     .body(|ui| {
                         any_clicked |= topics_ui(
