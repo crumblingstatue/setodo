@@ -399,7 +399,7 @@ fn rename_topic_ui(
     });
     if focus_me {
         out.response.request_focus();
-        out.select_all(ui.ctx());
+        out.select_all();
     }
     let re = &out.response;
     if re.lost_focus() {
@@ -411,16 +411,16 @@ fn rename_topic_ui(
 }
 
 trait TextEditOutputExt {
-    fn select_all(&mut self, ctx: &egui::Context);
+    fn select_all(&mut self);
 }
 
 impl TextEditOutputExt for TextEditOutput {
-    fn select_all(&mut self, ctx: &egui::Context) {
+    fn select_all(&mut self) {
         self.state
             .cursor
             .set_char_range(Some(CCursorRange::select_all(&self.galley)));
         let state = self.state.clone();
-        state.store(ctx, self.response.id);
+        state.store(&self.response.ctx, self.response.id);
     }
 }
 
