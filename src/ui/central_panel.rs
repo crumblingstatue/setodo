@@ -99,7 +99,18 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
                     && let Some(en) = topic.entries.get_mut(sel)
                 {
                     ui.separator();
-                    task_ui(en, &mut app.temp, ui, cp_avail_width);
+                    let cmd = task_ui(en, &mut app.temp, ui, cp_avail_width);
+                    if let Some(cmd) = cmd {
+                        match cmd {
+                            TaskUiCmd::GotoEntry { title } => {
+                                if let Some(pos) =
+                                    topic.entries.iter().position(|en| en.title == title)
+                                {
+                                    topic.task_sel = Some(pos);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -293,8 +304,19 @@ impl EntryKind {
     }
 }
 
+enum TaskUiCmd {
+    GotoEntry { title: String },
+}
+
 /// UI for details about an individual task
-fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_avail_width: f32) {
+#[must_use]
+fn task_ui(
+    entry: &mut Entry,
+    app_temp: &mut TodoAppTemp,
+    ui: &mut egui::Ui,
+    cp_avail_width: f32,
+) -> Option<TaskUiCmd> {
+    let mut out_cmd = None;
     ui.horizontal(|ui| {
         ui.heading(&entry.title);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -308,6 +330,20 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
             // TODO: We might want a less expensive way to check for changes
             let prev = entry.desc.clone();
             CommonMarkViewer::new().show_mut(ui, &mut app_temp.cm_cache, &mut entry.desc);
+            ui.output_mut(|out| {
+                out.commands.retain(|cmd| {
+                    let mut retain = true;
+                    if let egui::OutputCommand::OpenUrl(url) = cmd
+                        && let Some(en_title) = url.url.strip_prefix("entry://")
+                    {
+                        out_cmd = Some(TaskUiCmd::GotoEntry {
+                            title: en_title.to_owned(),
+                        });
+                        retain = false;
+                    }
+                    retain
+                });
+            });
             if entry.desc != prev {
                 app_temp.per_dirty = true;
             }
@@ -384,6 +420,7 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
             }
         }
     });
+    out_cmd
 }
 
 pub fn error_msgbox(msg: &str, modal: &mut Option<ModalPayload>) {
