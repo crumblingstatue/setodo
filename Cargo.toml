@@ -7,25 +7,25 @@ rust-version = "1.89"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = { version = "0.32.0", default-features=false, features = ["persistence", "glow", "x11"] }
+eframe = { version = "0.33.0", default-features=false, features = ["persistence", "glow", "x11"] }
 rmp-serde = "1.1.2"
 dirs-sys = "0.5"
 open = "5.0.1"
 zstd = "0.13.0"
-egui-phosphor = "0.10.0"
+egui-phosphor = "0.11.0"
 egui-fontcfg = { git = "https://github.com/crumblingstatue/egui-fontcfg.git" }
 existing_instance = { git = "https://github.com/crumblingstatue/rust-existing-instance.git" }
 constcat = "0.6"
 argwerk = "0.20.4"
-egui_extras = { version = "0.32.0", features = ["serde"] }
-egui-file-dialog = "0.11.0"
+egui_extras = { version = "0.33.0", features = ["serde"] }
+egui-file-dialog = "0.12.0"
 
 [dependencies.serde]
 version = "1.0.195"
 features = ["derive"]
 
 [dependencies.egui_commonmark]
-version = "0.21"
+version = "0.22"
 default-features = false
 features = ["pulldown_cmark"]
 
