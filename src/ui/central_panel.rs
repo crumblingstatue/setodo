@@ -356,71 +356,74 @@ fn task_ui(
                 app_temp.per_dirty = true;
             }
         }
-        for attachment in &entry.attachments {
-            ui.horizontal(|ui| {
-                ui.label(attachment.filename.display().to_string());
-                if ui.button("open").clicked() {
-                    let tmp_dir = std::env::temp_dir();
-                    let save_dir = tmp_dir.join("setodo-attachments");
-                    let path = save_dir.join(&attachment.filename);
-                    let dir_exists;
-                    if save_dir.exists() {
-                        dir_exists = true;
-                    } else {
-                        match std::fs::create_dir(save_dir) {
-                            Ok(()) => {
-                                dir_exists = true;
-                            }
-                            Err(e) => {
-                                error_msgbox(
-                                    &format!("Failed to create tmp dir: {e}"),
-                                    &mut app_temp.modal,
-                                );
-                                dir_exists = false;
-                            }
-                        }
-                    }
-                    if dir_exists {
-                        match std::fs::write(&path, &attachment.data) {
-                            Ok(()) => {
-                                if let Err(e) = open::that(path) {
-                                    error_msgbox(
-                                        &format!("Failed to open file: {e}"),
-                                        &mut app_temp.modal,
-                                    );
-                                }
-                            }
-                            Err(e) => error_msgbox(
-                                &format!("Failed to save file: {e}"),
-                                &mut app_temp.modal,
-                            ),
-                        }
-                    }
-                }
-            });
-        }
-        ui.separator();
-        if ui.button("Attach files").clicked() {
-            app_temp.file_dialog.pick_multiple();
-        }
-        if let Some(paths) = app_temp.file_dialog.take_picked_multiple() {
-            for path in paths {
-                if let Some(filename) = path.file_name() {
-                    let data = std::fs::read(&path).unwrap();
-                    entry.attachments.push(Attachment {
-                        filename: filename.into(),
-                        data,
-                    });
-                } else {
-                    error_msgbox(
-                        &format!("Could not determine filename for file '{}'", path.display()),
-                        &mut app_temp.modal,
-                    );
-                }
-            }
-        }
+        task_attachments_ui(entry, app_temp, ui);
     });
     out_cmd
+}
+
+fn task_attachments_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui) {
+    for attachment in &entry.attachments {
+        ui.horizontal(|ui| {
+            ui.label(attachment.filename.display().to_string());
+            if ui.button("open").clicked() {
+                let tmp_dir = std::env::temp_dir();
+                let save_dir = tmp_dir.join("setodo-attachments");
+                let path = save_dir.join(&attachment.filename);
+                let dir_exists;
+                if save_dir.exists() {
+                    dir_exists = true;
+                } else {
+                    match std::fs::create_dir(save_dir) {
+                        Ok(()) => {
+                            dir_exists = true;
+                        }
+                        Err(e) => {
+                            error_msgbox(
+                                &format!("Failed to create tmp dir: {e}"),
+                                &mut app_temp.modal,
+                            );
+                            dir_exists = false;
+                        }
+                    }
+                }
+                if dir_exists {
+                    match std::fs::write(&path, &attachment.data) {
+                        Ok(()) => {
+                            if let Err(e) = open::that(path) {
+                                error_msgbox(
+                                    &format!("Failed to open file: {e}"),
+                                    &mut app_temp.modal,
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            error_msgbox(&format!("Failed to save file: {e}"), &mut app_temp.modal);
+                        }
+                    }
+                }
+            }
+        });
+    }
+    ui.separator();
+    if ui.button("Attach files").clicked() {
+        app_temp.file_dialog.pick_multiple();
+    }
+    if let Some(paths) = app_temp.file_dialog.take_picked_multiple() {
+        for path in paths {
+            if let Some(filename) = path.file_name() {
+                let data = std::fs::read(&path).unwrap();
+                entry.attachments.push(Attachment {
+                    filename: filename.into(),
+                    data,
+                });
+            } else {
+                error_msgbox(
+                    &format!("Could not determine filename for file '{}'", path.display()),
+                    &mut app_temp.modal,
+                );
+            }
+        }
+    }
 }
 
 pub fn error_msgbox(msg: &str, modal: &mut Option<ModalPayload>) {
