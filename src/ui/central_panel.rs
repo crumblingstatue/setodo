@@ -13,20 +13,7 @@ use {
 
 pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
     if matches!(app.temp.state, UiState::FontCfg) {
-        if ui.link("Back").clicked() {
-            app.temp.state = UiState::Normal;
-        }
-        ui.separator();
-        if let FontDefsUiMsg::SaveRequest = app.temp.font_defs_ui.show(
-            ui,
-            &mut app.temp.font_defs_edit_copy,
-            Some(&mut app.temp.custom_edit_copy),
-        ) {
-            app.per.stored_font_data = Some(StoredFontData {
-                families: app.temp.font_defs_edit_copy.families.clone(),
-                custom: app.temp.custom_edit_copy.clone(),
-            });
-        }
+        font_defs_ui(ui, app);
         return;
     }
     let cp_avail_height = ui.available_height();
@@ -115,6 +102,23 @@ pub fn ui(ui: &mut egui::Ui, app: &mut TodoApp) {
             }
         });
     });
+}
+
+fn font_defs_ui(ui: &mut egui::Ui, app: &mut TodoApp) {
+    if ui.link("Back").clicked() {
+        app.temp.state = UiState::Normal;
+    }
+    ui.separator();
+    if let FontDefsUiMsg::SaveRequest = app.temp.font_defs_ui.show(
+        ui,
+        &mut app.temp.font_defs_edit_copy,
+        Some(&mut app.temp.custom_edit_copy),
+    ) {
+        app.per.stored_font_data = Some(StoredFontData {
+            families: app.temp.font_defs_edit_copy.families.clone(),
+            custom: app.temp.custom_edit_copy.clone(),
+        });
+    }
 }
 
 fn tasks_list_ui(
