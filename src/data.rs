@@ -12,7 +12,7 @@ pub struct Topic {
     pub task_sel: Option<usize>,
     /// Child topics, if any
     #[serde(default)]
-    pub children: Vec<Topic>,
+    pub children: Vec<Self>,
 }
 
 impl Topic {
