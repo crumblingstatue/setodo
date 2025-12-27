@@ -303,6 +303,7 @@ fn task_ui(entry: &mut Entry, app_temp: &mut TodoAppTemp, ui: &mut egui::Ui, cp_
         });
     });
     egui::ScrollArea::vertical().show(ui, |ui| {
+        ui.style_mut().url_in_tooltip = true;
         if app_temp.view_task_as_markdown {
             // TODO: We might want a less expensive way to check for changes
             let prev = entry.desc.clone();
