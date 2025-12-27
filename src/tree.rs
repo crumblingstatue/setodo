@@ -61,7 +61,7 @@ mod test {
     use super::move_;
 
     #[derive(PartialEq, Debug)]
-    struct N(&'static str, Vec<N>);
+    struct N(&'static str, Vec<Self>);
     impl super::Node for N {
         fn children_mut(&mut self) -> &mut Vec<Self> {
             &mut self.1
