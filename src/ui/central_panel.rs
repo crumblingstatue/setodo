@@ -324,10 +324,13 @@ fn task_ui(
     ui.horizontal(|ui| {
         ui.heading(&entry.title);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.checkbox(&mut app_temp.view_task_as_markdown, "Markdown")
+            ui.checkbox(&mut app_temp.view_task_as_markdown, "Markdown [F2]")
                 .on_hover_text("View as markdown");
         });
     });
+    if ui.input(|inp| inp.key_pressed(egui::Key::F2)) {
+        app_temp.view_task_as_markdown ^= true;
+    }
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.style_mut().url_in_tooltip = true;
         if app_temp.view_task_as_markdown {
