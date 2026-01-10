@@ -312,6 +312,10 @@ enum TaskUiCmd {
     GotoEntry { title: String },
 }
 
+fn entry_text_edit_id() -> egui::Id {
+    egui::Id::new("entry_text_edit")
+}
+
 /// UI for details about an individual task
 #[must_use]
 fn task_ui(
@@ -324,12 +328,19 @@ fn task_ui(
     ui.horizontal(|ui| {
         ui.heading(&entry.title);
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            // Unfortunately focus request doesn't seem to work when the checkbox is clicked.
+            // Maybe the click overides the focus request.
+            // So using `F2` is the recommended way to toggle markdown if you want to keep the
+            // text editor focused.
             ui.checkbox(&mut app_temp.view_task_as_markdown, "Markdown [F2]")
                 .on_hover_text("View as markdown");
         });
     });
     if ui.input(|inp| inp.key_pressed(egui::Key::F2)) {
         app_temp.view_task_as_markdown ^= true;
+        if !app_temp.view_task_as_markdown {
+            ui.memory_mut(|mem| mem.request_focus(entry_text_edit_id()));
+        }
     }
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.style_mut().url_in_tooltip = true;
@@ -356,6 +367,7 @@ fn task_ui(
             }
         } else {
             let te = egui::TextEdit::multiline(&mut entry.desc)
+                .id(entry_text_edit_id())
                 .code_editor()
                 .desired_width(cp_avail_width);
             let re = ui.add(te);
